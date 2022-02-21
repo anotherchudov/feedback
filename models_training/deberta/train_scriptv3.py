@@ -201,17 +201,27 @@ def extract_entities(ps, n):
                     all_entities[current_cat] = []
                 all_entities[current_cat].append((current_start, ix - 1))
             current_cat = (cat_ps[ix] + 1) // 2
-            current_start = ix
+            current_start = ix        
         elif cat_ps[ix] == 0:
             if current_cat is not None:
                 if current_cat not in all_entities:
                     all_entities[current_cat] = []
                 all_entities[current_cat].append((current_start, ix - 1))
             current_cat = None
+        elif current_cat is not None and cat_ps[ix] != current_cat * 2:
+            if current_cat not in all_entities:
+                all_entities[current_cat] = []
+            all_entities[current_cat].append((current_start, ix - 1))
+            current_cat = None
     if current_cat is not None:
         if current_cat not in all_entities:
             all_entities[current_cat] = []
         all_entities[current_cat].append((current_start, ix))
+    
+    for cat_ix, min_len in zip(range(1, 8), (2, 2, 5, 2, 4, 3, 2)):
+        if cat_ix in all_entities:
+            all_entities[cat_ix] = [x for x in all_entities[cat_ix] if x[1] - x[0] + 1 >= min_len]
+            
     return all_entities
 
 def process_sample(raw_ps, raw_gts, index_map, bounds, gt_spans, num_tokens, match_stats, min_len=0):
