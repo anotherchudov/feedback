@@ -102,7 +102,7 @@ feedback
 - swa ( sliding windows version of )
 - [reverse cross entropy](https://www.kaggle.com/c/feedback-prize-2021/discussion/306279)
     - reverse cross entropy appears to have **speed up convergence, maybe reduce number of epochs to 7 or less**
-- Tokenization of `xlnet` and `debertav3` preserves newlines, otherwise severe drop in performance
+- Making sure that tokenization of `xlnet` and `debertav3` preserves newlines, otherwise severe drop in performance
 
 ## ⛔️ Not worked
 - mixup - briefly tried, looks like same results
