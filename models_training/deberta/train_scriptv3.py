@@ -1,5 +1,8 @@
+# -*- coding: utf-8 -*-
+# +
 import sys
-sys.path.insert(0, '/home/qwe/projects/feedback/models_training/longformer/sumbission/codes')
+sys.path.insert(0, '/home/feeback/working/feedback/models_training/longformer/sumbission/codes')
+
 gpun = sys.argv[1]
 seed = 0
 min_len=0
@@ -21,27 +24,31 @@ min_lr = 32e-6
 dataset_version = 2
 warmup_steps = 500
 rce_weight = 0.1
+
 if gpun == '0':
     max_grad_norm = 1.
     val_fold = 0
 elif gpun == '1':
     val_fold = 1
-if gpun == '2':
+elif gpun == '2':
     val_fold = 0
 elif gpun == '3':
     val_fold = 1
     max_grad_norm = 1.
-    
+
 ce_weight = 1 - rce_weight
 
 decay_bias = False
 eval_interval = 200
-    
+
 sys.path.append('longformer/tvm/python/')
 sys.path.append('longformer/')
+
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = gpun
 import torch as t
+
+os.environ['CUDA_VISIBLE_DEVICES'] = gpun
+
 # t.use_deterministic_algorithms(True)
 # from longformer.longformer import Longformer, LongformerConfig, RobertaModel
 # from longformer.sliding_chunks import pad_to_window_size
@@ -60,7 +67,7 @@ import re
 
 with open('../../token_counts.pickle', 'rb') as f:
     groupped_token_counts, ungroupped_token_counts = pickle.load(f)
-    
+
 if use_groupped_weights:
     counts = groupped_token_counts
 else:
@@ -81,8 +88,8 @@ def seed_everything(seed=0):
     t.cuda.manual_seed_all(seed)
     t.backends.cudnn.deterministic = True
     t.backends.cudnn.benchmark = False
-    
-    
+
+
 label_names = ['None', 'Lead', 'Position', 'Evidence', 'Claim',
                'Concluding Statement', 'Counterclaim', 'Rebuttal']
 
@@ -102,8 +109,10 @@ class TrainDataset(t.utils.data.Dataset):
     def __init__(self, ids):
         self.ids = ids
         self.data = h5py.File(f'../../deberta_spm_data_v{dataset_version}.h5py')
+
     def __len__(self):
         return len(self.ids)
+    
     def __getitem__(self, ix):
         x = self.ids[ix]
         tokens = self.data['tokens'][x]
@@ -121,8 +130,8 @@ class TrainDataset(t.utils.data.Dataset):
         label_mask[zero_label_mask] = token_weights[0]
         label_mask[0] = 0
         return tokens, attention_mask, cbio_labels, label_mask, num_tokens
-    
-    
+
+
 class ValDataset(t.utils.data.Dataset):
     def __init__(self, ids):
         self.ids = ids
@@ -171,7 +180,7 @@ class ValDataset(t.utils.data.Dataset):
         
         return tokens, attention_mask, cbio_labels, label_mask, token_bounds, gt_dict, index_map, num_tokens
 
-    
+
 first_batch = True
 def train_collate_fn(ins):
     global first_batch
@@ -276,7 +285,7 @@ def map_span_to_word_indices(span, index_map, bounds):
 def split_predstring(x):
     vals = x.split()
     return int(vals[0]), int(vals[-1])
-    
+
 
 with open('../../id_to_ix_map.pickle', 'rb') as f:
     id_to_ix_map = {x.split('/')[-1].split('.')[0]: y for x, y in pickle.load(f).items()}
@@ -295,7 +304,7 @@ for epoch in range(epochs):
     all_train_ids.extend(epoch_train_ids)
 # if shuffle_data:
 #     shuffle(all_train_ids)
-    
+
 class TvmLongformer(t.nn.Module):
     def __init__(self):
         super().__init__()
@@ -330,7 +339,7 @@ model = TvmLongformer().cuda()
 for m in model.modules():
     if isinstance(m, t.nn.Dropout):
         m.p = 0
-        
+
 weights = []
 biases = []
 for n, p in model.named_parameters():
@@ -432,8 +441,8 @@ if global_attn == 0:
     model_params = [p for n, p in model.named_parameters() if not (n.endswith('_global.bias') or n.endswith('_global.weight'))]
 else:
     model_params = [p for p in model.parameters()]
-    
-    
+
+
 scaler = t.cuda.amp.GradScaler(init_scale=65536.0/grad_acc_steps)
 for step_, batch in enumerate(train_dataset):
     if step_ % grad_acc_steps == 0:
@@ -449,8 +458,10 @@ for step_, batch in enumerate(train_dataset):
     else:
         rce = -(((t.exp(outs) * t.log_softmax(label, -1)).sum(-1) * label_mask).sum(-1) / label_mask.sum(-1)).mean()
         l = ce * ce_weight + rce * rce_weight    
+    
     scaler.scale(l).backward()
     ls.append(l.detach())
+    
     if step_ % grad_acc_steps == grad_acc_steps - 1:
         if max_grad_norm is not None:
             scaler.unscale_(opt)
@@ -460,13 +471,16 @@ for step_, batch in enumerate(train_dataset):
                 grad_mult = (max_grad_norm / (norm + 1e-6)).clamp(max=1.)
                 for p in model_params:
                     p.grad.detach().mul_(grad_mult)
+        
         scaler.step(opt)#.step()
         scaler.update()
+        
         with t.no_grad():
             current_averaged_params = {x: y.clone().double() + current_averaged_params[x] for x, y in model.state_dict().items()}
             match_updates = calc_acc(outs, label, label_mask)
             train_matches += match_updates[0]
             train_labels += match_updates[1]
+
         if step % eval_interval == (eval_interval - 1):
             # norms = t.stack(norms)
             log_dict = {}
