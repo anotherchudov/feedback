@@ -1,6 +1,6 @@
 # Dataset
 *.h5py
-
+wandb/
 
 
 # Byte-compiled / optimized / DLL files
