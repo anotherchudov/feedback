@@ -62,8 +62,14 @@ feedback
     - it is not deterministic due to [rapids umap](https://github.com/rapidsai/cuml), so produced splits also included in that folder.
     - rapids umap code is mostly taken from [kaggle notebook - cdeotte/rapids-umap-tfidf-kmeans-discovers-15-topics](https://www.kaggle.com/cdeotte/rapids-umap-tfidf-kmeans-discovers-15-topics)
 - **`train.csv`** is slightly cleaner version of public train file.
+    - train.csv was made semi-manually after searching for entities where the symbol before first letter of discourse_text was alphanumeric.
     - Has several columns related to the `gt label`, hosts-provided target is `discourse_text`, what been scored is an overlap with `predictionstring`
     - **Those columns are all a `noisy target`**, `discourse_text` worked best in preliminary tests.
+- **`data_rev1.csv`**
+    - Made in similar process when looking for starts/ends of discourse_text split in `train.csv`
+    - For samples where `discourse_text` starts 1 word before `punctuation mark` or ends 1 word after `punctuation mark`
+    - `data_rev1.csv` was made with a script in `longformer` directory and new `train.csv` with the same as for debertav3 except for character replacement
+
 
 ### Models
 - `Deberta` - not deterministic, yet better results, faster training and faster submission as well.
