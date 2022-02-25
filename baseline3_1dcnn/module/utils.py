@@ -38,7 +38,7 @@ def get_all_texts(args):
     # key : id value txt
     for text_file in glob(osp.join(args.dataset_path, 'train/*.txt')):
         with open(text_file) as f:
-            all_texts[f.split('/')[-1].split('.')[0]] = f.read()
+            all_texts[text_file.split('/')[-1].split('.')[0]] = f.read()
     
     return all_texts
 
@@ -57,25 +57,27 @@ def val_collate_fn(ins):
     max_len = (max(x[-1] for x in ins) + 7) // 8 * 8
     return tuple(torch.from_numpy(np.concatenate([ins[z][x][None, :max_len] for z in range(len(ins))])) for x in range(len(ins[0]) - 3)) + ([x[-3] for x in ins], [x[-2] for x in ins], np.array([x[-1] for x in ins]),)
 
-def extract_entities(ps, n):
-    cat_ps = ps.argmax(-1).cpu().numpy()
+def extract_entities(preds, n):
+    cat_preds = preds.argmax(-1).cpu().numpy()
     all_entities = {}
     current_cat = None
     current_start = None
+
     for ix in range(1, n - 1):
-        if cat_ps[ix] % 2 == 1:
+        if cat_preds[ix] % 2 == 1:
             if current_cat is not None:
                 if current_cat not in all_entities:
                     all_entities[current_cat] = []
                 all_entities[current_cat].append((current_start, ix - 1))
-            current_cat = (cat_ps[ix] + 1) // 2
+            current_cat = (cat_preds[ix] + 1) // 2
             current_start = ix
-        elif cat_ps[ix] == 0:
+        elif cat_preds[ix] == 0:
             if current_cat is not None:
                 if current_cat not in all_entities:
                     all_entities[current_cat] = []
                 all_entities[current_cat].append((current_start, ix - 1))
             current_cat = None
+
     if current_cat is not None:
         if current_cat not in all_entities:
             all_entities[current_cat] = []

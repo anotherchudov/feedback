@@ -12,8 +12,10 @@ import wandb
 import pandas as pd
 import numpy as np
 
-import torch.distributed as dist
 import torch.nn as nn
+import torch.distributed as dist
+
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 from ast import literal_eval
 from sklearn.model_selection import KFold
@@ -34,7 +36,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def get_config():
     parser = argparse.ArgumentParser(description="use huggingface models")
-    parser.add_argument("--wandb_user", default='ducky', type=int)
+    parser.add_argument("--wandb_user", default='ducky', type=str)
     parser.add_argument("--dataset_path", default='../../feedback-prize-2021', type=str)
     parser.add_argument("--seed", default=0, type=int)
     parser.add_argument("--min_len", default=0, type=int)
@@ -64,6 +66,10 @@ def get_config():
     parser.add_argument("--model_name", default="microsoft/deberta-v3-large", type=str)
     parser.add_argument("--local_rank", type=int, default=-1)
 
+    # Distributed Training
+    parser.add_argument("--ddp", action='store_true', help='use torch distributed data parallel')
+    parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0 1 2 3')
+
     args = parser.parse_args()
 
     if args.local_rank !=-1:
@@ -73,9 +79,13 @@ def get_config():
         args.rank = torch.distributed.get_rank()
         args.world_size = torch.distributed.get_world_size()  
 
+        # checking settings for distributed training
+        assert args.batch_size % args.world_size == 0, f'--batch_size {args.batch_size} must be multiple of world size'
+        assert torch.cuda.device_count() > args.local_rank, 'insufficient CUDA devices for DDP command'
     else:
        args.device = torch.device("cuda")
        args.rank = 0
+
 
     return args
 
@@ -118,7 +128,7 @@ def get_dataloader(train_ids, val_ids, data, csv, all_texts, val_files, label_na
     return train_dataloader, val_dataloader
 
 def get_model(args, train_dataloader):
-    model = TvmLongformer(args).cuda()
+    model = TvmLongformer(args).to(args.device)
 
     # dropout layer
     for m in model.modules():
@@ -143,8 +153,11 @@ def get_model(args, train_dataloader):
                     (np.cos(np.linspace(0, np.pi, len(train_dataloader)*args.epochs - args.warmup_steps)) * .5 + .5) * (args.lr - args.min_lr)
                     + args.min_lr]
 
-
-
+    
+    # distributed training
+    if args.ddp:
+        model = DDP(model, device_ids=[args.local_rank], output_device=args.local_rank)
+        model.to(args.device)
 
     return model, opt, lr_schedule
 
@@ -167,8 +180,4 @@ if __name__ == "__main__":
     best_score = trainer.train()
 
     print(best_score)
-
-
-
-
     
