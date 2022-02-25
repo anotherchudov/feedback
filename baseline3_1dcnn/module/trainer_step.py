@@ -152,7 +152,7 @@ class Trainer():
                                     best_val_score = val_score
                                     torch.save(self.model.state_dict(), f'result/baseline_fold{self.args.val_fold}.pt')
 
-                                log_dict.update(make_match_dict(val_ce, val_accs, val_labels, f'ValSWA{params_ix*self.args.eval_interval}', (f1s, rec, prec)))
+                                log_dict.update(make_match_dict(val_ce, val_accs, val_labels, self.label_names, f'ValSWA{params_ix*self.args.eval_interval}', (f1s, rec, prec)))
 
                     self.model.cpu()
                     self.model.load_state_dict(params_backup)
