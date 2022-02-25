@@ -15,15 +15,10 @@ import numpy as np
 import torch.nn as nn
 import torch.distributed as dist
 
+from ast import literal_eval
+from torch.utils.data import DataLoader
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from ast import literal_eval
-from sklearn.model_selection import KFold
-from torch import optim
-from torch.utils.data import DataLoader
-from torch.nn.parallel import DistributedDataParallel
-from torch.utils.data.distributed import DistributedSampler
-from torch.utils.data import RandomSampler, SequentialSampler
 from transformers import AutoConfig, AutoModel, AutoTokenizer, AutoModelForTokenClassification
 from transformers import get_cosine_with_hard_restarts_schedule_with_warmup
 
@@ -66,13 +61,10 @@ def get_config():
     parser.add_argument("--model_name", default="microsoft/deberta-v3-large", type=str)
     parser.add_argument("--local_rank", type=int, default=-1)
 
-    # Distributed Training
-    parser.add_argument("--ddp", action='store_true', help='use torch distributed data parallel')
-    parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0 1 2 3')
-
     args = parser.parse_args()
 
     if args.local_rank !=-1:
+        print('ddp local rank', args.local_rank)
         torch.cuda.set_device(args.local_rank)
         dist.init_process_group(backend='nccl')
         args.device = torch.device("cuda", args.local_rank)
@@ -82,9 +74,12 @@ def get_config():
         # checking settings for distributed training
         assert args.batch_size % args.world_size == 0, f'--batch_size {args.batch_size} must be multiple of world size'
         assert torch.cuda.device_count() > args.local_rank, 'insufficient CUDA devices for DDP command'
+
+        args.ddp = True
     else:
-       args.device = torch.device("cuda")
-       args.rank = 0
+        args.device = torch.device("cuda")
+        args.rank = 0
+        args.ddp = False
 
 
     return args
@@ -122,13 +117,13 @@ def get_dataloader(train_ids, val_ids, data, csv, all_texts, val_files, label_na
     train_dataset = TrainDataset(train_ids, data, args.label_smoothing, token_weights, args.data_prefix)
     val_dataset = ValDataset(val_ids, data, csv, all_texts, val_files, label_names, token_weights)
 
-    train_dataloader = torch.utils.data.DataLoader(train_dataset, collate_fn=train_collate_fn, batch_size=args.batch_size, num_workers=args.num_worker)
-    val_dataloader = torch.utils.data.DataLoader(val_dataset, collate_fn=val_collate_fn, batch_size=args.batch_size, num_workers=8, persistent_workers=True)
+    train_dataloader = DataLoader(train_dataset, collate_fn=train_collate_fn, batch_size=args.batch_size, num_workers=args.num_worker)
+    val_dataloader = DataLoader(val_dataset, collate_fn=val_collate_fn, batch_size=args.batch_size, num_workers=8, persistent_workers=True)
 
     return train_dataloader, val_dataloader
 
 def get_model(args, train_dataloader):
-    model = TvmLongformer(args).to(args.device)
+    model = TvmLongformer(args).cuda()
 
     # dropout layer
     for m in model.modules():
