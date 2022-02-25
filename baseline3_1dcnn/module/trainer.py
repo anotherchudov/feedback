@@ -38,6 +38,7 @@ class Trainer():
             tokens, mask, label, label_mask = (x.cuda() for x in batch)
             with torch.cuda.amp.autocast():
                 outs = self.model(tokens, mask)
+
             ce = -(((outs * label).sum(-1) * label_mask).sum(-1) / label_mask.sum(-1)).mean()
             if self.args.rce_weight == 0:
                 l = ce

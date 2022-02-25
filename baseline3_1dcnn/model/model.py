@@ -1,24 +1,29 @@
 import sys
 from torch.utils.checkpoint import checkpoint
-sys.path.insert(0, '/home/dlrgy22/Feedback/code/models_training/longformer/sumbission/codes')
+sys.path.insert(0, '../codes')
 import torch
 from torch.nn import functional as F
 from transformers import DebertaV2Model
 
 class TvmLongformer(torch.nn.Module):
-    def __init__(self, grad_checkpt, extra_dense):
+    """Currently microsoft/deberta-v3-large"""
+    def __init__(self, args):
         super().__init__()
+        self.args = args
+
         self.feats = DebertaV2Model.from_pretrained('microsoft/deberta-v3-large')
         self.feats.pooler = None
-        if grad_checkpt:
+
+        if args.grad_checkpt:
             self.feats.gradient_checkpointing_enable()
+
         self.feats.train()
 
         self.conv1d_layer1 = torch.nn.Conv1d(1024, 1024, kernel_size=1)
         self.conv1d_layer3 = torch.nn.Conv1d(1024, 1024, kernel_size=3, padding=1)
         self.conv1d_layer5 = torch.nn.Conv1d(1024, 1024, kernel_size=5, padding=2)
 
-        if extra_dense:
+        if args.extra_dense:
             self.class_projector = torch.nn.Sequential(
                 torch.nn.LayerNorm(1024*3),
                 torch.nn.Linear(1024*3, 256),

@@ -1,3 +1,5 @@
+
+import os.path as osp
 import pickle
 import h5py
 from glob import glob
@@ -31,12 +33,12 @@ def get_token_weights(use_groupped_weights, weights_pow):
 
     return token_weights
 
-def get_all_texts():
+def get_all_texts(args):
     all_texts = {}
     # key : id value txt
-    for f in glob('../input/feedback-prize-2021/train/*.txt'):
-        with open(f) as x:
-            all_texts[f.split('/')[-1].split('.')[0]] = x.read()
+    for text_file in glob(osp.join(args.dataset_path, 'train/*.txt')):
+        with open(text_file) as f:
+            all_texts[f.split('/')[-1].split('.')[0]] = f.read()
     
     return all_texts
 
