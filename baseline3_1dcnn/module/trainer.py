@@ -21,6 +21,8 @@ class Trainer():
         self.args = args
     
     def train_one_epoch(self, step):
+        self.model.train()
+
         losses = []
         train_matches = torch.zeros(16)
         train_labels = torch.zeros(16)
@@ -38,16 +40,16 @@ class Trainer():
                     self.optimizer.param_groups[ix]['lr'] = self.lr_schedule[step]
                 self.optimizer.zero_grad()
             
-            tokens, mask, label, label_mask = (x.cuda() for x in batch)
+            tokens, mask, label, class_weight = (x.cuda() for x in batch)
             with torch.cuda.amp.autocast():
                 outs = self.model(tokens, mask)
 
             # loss function - cross entropy loss & rce loss
-            ce = -(((outs * label).sum(-1) * label_mask).sum(-1) / label_mask.sum(-1)).mean()
+            ce = -(((outs * label).sum(-1) * class_weight).sum(-1) / class_weight.sum(-1)).mean()
             if self.args.rce_weight == 0:
                 loss = ce
             else:
-                rce = -(((torch.exp(outs) * torch.log_softmax(label, -1)).sum(-1) * label_mask).sum(-1) / label_mask.sum(-1)).mean()
+                rce = -(((torch.exp(outs) * torch.log_softmax(label, -1)).sum(-1) * class_weight).sum(-1) / class_weight.sum(-1)).mean()
                 loss = ce * self.args.ce_weight + rce * self.args.rce_weight    
             
             scaler.scale(loss).backward()
@@ -67,7 +69,7 @@ class Trainer():
                 scaler.update()
 
                 with torch.no_grad():
-                    match_updates = calc_acc(outs, label, label_mask)
+                    match_updates = calc_acc(outs, label, class_weight)
                     train_matches += match_updates[0]
                     train_labels += match_updates[1]
                 
@@ -79,8 +81,9 @@ class Trainer():
         return step
     
     def valid_one_epoch(self, epoch):
-        ls = []
         self.model.eval()
+
+        losses = []
         val_matches = torch.zeros(16)
         val_labels = torch.zeros(16)
         match_stats = {ix:  {'fp': 0, 'fn': 0, 'tp': 0} for ix in range(1, 8)}
@@ -90,11 +93,14 @@ class Trainer():
 
         for tokens, mask, labels, labels_mask, bounds, gt_dicts, index_map, num_tokens in tqdm(self.valid_loader, total=len(self.valid_loader)):
             with torch.no_grad():
-                tokens, mask, label, label_mask = (x.cuda() for x in (tokens, mask, labels, labels_mask))
+                tokens, mask, label, class_weight = (x.cuda() for x in (tokens, mask, labels, labels_mask))
                 with torch.cuda.amp.autocast():
                     outs = self.model(tokens, mask)
-                ls.append(-(((outs.float() * label).sum(-1) * label_mask).sum(-1) / label_mask.sum(-1)).mean())
-                match_updates = calc_acc(outs, label, label_mask)
+
+                loss = -(((outs.float() * label).sum(-1) * class_weight).sum(-1) / class_weight.sum(-1)).mean()
+                losses.append(loss)
+
+                match_updates = calc_acc(outs, label, class_weight)
                 val_matches += match_updates[0]
                 val_labels += match_updates[1]
                 for sample_ix, num in enumerate(num_tokens):
@@ -109,22 +115,27 @@ class Trainer():
 
         f1s[0] = np.mean(f1s[1:])
 
-        self.model.train()
         val_accs = (val_matches / val_labels).cpu().numpy()
         val_labels = val_labels.cpu().numpy()
 
-        return torch.stack(ls).mean().item(), val_accs, val_labels, f1s, rec, prec
+        return torch.stack(losses).mean().item(), val_accs, val_labels, f1s, rec, prec
 
     def train(self):
+
         best_val_score = 0
         global_step = 0
         for epoch in range(self.args.epochs):
+
+            # train
             global_step = self.train_one_epoch(global_step)
+
+            # validation
             torch.autograd.set_grad_enabled(False)
             val_ce, val_accs, val_labels, f1s, rec, prec = self.valid_one_epoch(epoch)
             torch.autograd.set_grad_enabled(True)
             val_score = f1s[0]
-            print(val_score)
+
+            print(f'{val_score}')
 
             log_dict = {}
             log_dict.update(make_match_dict(val_ce, val_accs, val_labels, self.class_names, f'ValSWA', (f1s, rec, prec)))
