@@ -35,9 +35,10 @@ def get_config():
     parser.add_argument("--wandb_user", default='ducky', type=str)
     parser.add_argument("--wandb_project", default='feedback_deberta_large', type=str)
     parser.add_argument("--dataset_path", default='../../feedback-prize-2021', type=str)
+    parser.add_argument("--save_path", default='result', type=str)
     parser.add_argument("--seed", default=0, type=int)
     parser.add_argument("--min_len", default=0, type=int)
-    parser.add_argument("--wd", default=1e-2, type=float)
+    parser.add_argument("--weight_decay", default=1e-2, type=float)
     parser.add_argument("--weights_pow", default=0.1, type=float)
     parser.add_argument("--use_groupped_weights", default=False, type=bool)
     parser.add_argument("--global_attn", default=False, type=int)
@@ -98,7 +99,7 @@ def seed_everything(seed):
 def wandb_setting(args):
     wandb.login()
     run = wandb.init(entity=args.wandb_user, project=args.wandb_project)
-    run.name = f'v3_fold{args.val_fold}_minlr{args.min_lr}_maxlr{args.lr}_wd{args.wd}_warmup{args.warmup_steps}_gradnorm{args.max_grad_norm}_biasdecay{args.decay_bias}_ls{args.label_smoothing}_wp{args.weights_pow}_data{args.dataset_version}_rce{args.rce_weight}'
+    run.name = f'v3_fold{args.val_fold}_minlr{args.min_lr}_maxlr{args.lr}_wd{args.weight_decay}_warmup{args.warmup_steps}_gradnorm{args.max_grad_norm}_biasdecay{args.decay_bias}_ls{args.label_smoothing}_wp{args.weights_pow}_data{args.dataset_version}_rce{args.rce_weight}'
 
 def get_data_files(args):
     token_weights = get_token_weights(args.use_groupped_weights, args.weights_pow)
@@ -145,8 +146,8 @@ def get_model(args, train_dataloader):
             # except above
             weights.append(p)
 
-    optimizer = torch.optim.AdamW([{'params': weights, 'weight_decay': args.wd, 'lr': 0},
-                                   {'params': biases, 'weight_decay': 0 if not args.decay_bias else args.wd, 'lr': 0}])
+    optimizer = torch.optim.AdamW([{'params': weights, 'weight_decay': args.weight_decay, 'lr': 0},
+                                   {'params': biases, 'weight_decay': 0 if not args.decay_bias else args.weight_decay, 'lr': 0}])
 
     lr_schedule = np.r_[np.linspace(0, args.lr, args.warmup_steps),
                     (np.cos(np.linspace(0, np.pi, len(train_dataloader)*args.epochs - args.warmup_steps)) * .5 + .5) * (args.lr - args.min_lr)
@@ -174,6 +175,10 @@ if __name__ == "__main__":
                    'Counterclaim',
                    'Rebuttal']
 
+    # create directory to save model
+    if not osp.exists(args.save_path):
+        os.makedirs(args.save_path)
+
     # data
     all_texts, token_weights, data, csv, train_ids, val_ids, train_text_ids, val_text_ids = get_data_files(args)
     train_dataloader, val_dataloader = get_dataloader(train_ids, val_ids, data, csv, all_texts, val_text_ids, class_names, token_weights, args)
@@ -182,7 +187,7 @@ if __name__ == "__main__":
     model, optimizer, lr_schedule = get_model(args, train_dataloader)
 
     # train
-    trainer = Trainer(model, train_dataloader, val_dataloader, lr_schedule, optimizer, class_names, "result/noSWA", args)
+    trainer = Trainer(args, model, train_dataloader, val_dataloader, lr_schedule, optimizer, class_names)
     best_score = trainer.train()
 
     print(best_score)

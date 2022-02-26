@@ -1,4 +1,5 @@
 
+import os.path as osp
 import numpy as np
 import wandb
 
@@ -10,15 +11,14 @@ from torch.cuda.amp import autocast, GradScaler
 from .utils import calc_acc, process_sample, make_match_dict
 
 class Trainer():
-    def __init__(self, model, train_loader, valid_loader, lr_schedule, optimizer, class_names, save_path, args):
+    def __init__(self, args, model, train_loader, valid_loader, lr_schedule, optimizer, class_names):
+        self.args = args
         self.model = model
         self.train_loader = train_loader
         self.valid_loader = valid_loader
         self.lr_schedule = lr_schedule
         self.optimizer = optimizer
         self.class_names = class_names
-        self.save_path = save_path
-        self.args = args
     
     def train_one_epoch(self, step):
         self.model.train()
@@ -36,8 +36,8 @@ class Trainer():
         pbar = tqdm(enumerate(self.train_loader), total=len(self.train_loader), position=0, leave=True)
         for step_, batch in pbar:
             if step_ % self.args.grad_acc_steps == 0:
-                for ix in range(len(self.optimizer.param_groups)):
-                    self.optimizer.param_groups[ix]['lr'] = self.lr_schedule[step]
+                for g_i in range(len(self.optimizer.param_groups)):
+                    self.optimizer.param_groups[g_i]['lr'] = self.lr_schedule[step]
                 self.optimizer.zero_grad()
             
             tokens, mask, label, class_weight = (x.cuda() for x in batch)
@@ -122,7 +122,7 @@ class Trainer():
 
     def train(self):
 
-        best_val_score = 0
+        best_f1 = 0
         global_step = 0
         for epoch in range(self.args.epochs):
 
@@ -141,11 +141,17 @@ class Trainer():
             log_dict.update(make_match_dict(val_ce, val_accs, val_labels, self.class_names, f'ValSWA', (f1s, rec, prec)))
             wandb.log(log_dict) 
 
-            if best_val_score >= val_score:
-                torch.save(self.model.state_dict(), f"{self.save_path}_fold{self.args.val_fold}.pth")
-                print("save model .....")
+            if val_score > best_f1:
                 best_f1 = val_score
+                save_name = f"debertav3_fold{self.args.val_fold}.pth"
+                torch.save(self.model.state_dict(), osp.join(self.args.save_path, save_name))
+                print("save model .....")
         
+        # save before the training ends
+        save_name = f"debertav3_fold{self.args.val_fold}_f1{best_f1:.2f}.pth"
+        torch.save(self.model.state_dict(), osp.join(self.args.save_path, save_name))
+        print("save model .....")
+
         return best_f1
 
 
