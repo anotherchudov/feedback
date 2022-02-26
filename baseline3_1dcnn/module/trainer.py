@@ -40,7 +40,7 @@ class Trainer():
                     self.optimizer.param_groups[g_i]['lr'] = self.lr_schedule[step]
                 self.optimizer.zero_grad()
             
-            tokens, mask, label, class_weight = (x.cuda() for x in batch)
+            tokens, mask, label, class_weight = (x.to(self.args.device) for x in batch)
             with torch.cuda.amp.autocast():
                 outs = self.model(tokens, mask)
 
@@ -93,7 +93,7 @@ class Trainer():
 
         for tokens, mask, labels, labels_mask, bounds, gt_dicts, index_map, num_tokens in tqdm(self.valid_loader, total=len(self.valid_loader)):
             with torch.no_grad():
-                tokens, mask, label, class_weight = (x.cuda() for x in (tokens, mask, labels, labels_mask))
+                tokens, mask, label, class_weight = (x.to(self.args.device) for x in (tokens, mask, labels, labels_mask))
                 with torch.cuda.amp.autocast():
                     outs = self.model(tokens, mask)
 

@@ -63,6 +63,7 @@ def get_config():
     parser.add_argument("--num_worker", default=8, type=int)
     parser.add_argument("--model_name", default="microsoft/deberta-v3-large", type=str)
     parser.add_argument("--local_rank", type=int, default=-1, help="do not modify!")
+    parser.add_argument("--device", type=int, default=0, help="select the gpu device to train")
 
     args = parser.parse_args()
 
@@ -80,7 +81,7 @@ def get_config():
 
         args.ddp = True
     else:
-        args.device = torch.device("cuda")
+        args.device = torch.device("cuda", args.device)
         args.rank = 0
         args.ddp = False
 
@@ -128,7 +129,7 @@ def get_dataloader(train_ids, val_ids, data, csv, all_texts, val_text_ids, class
     return train_dataloader, val_dataloader
 
 def get_model(args, train_dataloader):
-    model = TvmLongformer(args).cuda()
+    model = TvmLongformer(args).to(args.device)
 
     # dropout layer
     for m in model.modules():
