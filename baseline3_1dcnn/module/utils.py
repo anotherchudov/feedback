@@ -142,10 +142,10 @@ def process_sample(raw_ps, raw_gts, index_map, bounds, gt_spans, num_tokens, mat
                 
     return match_stats
 
-def make_match_dict(ce, accs, labels, label_names, prefix, extras=None):
+def make_match_dict(ce, accs, labels, class_names, prefix, extras=None):
     log_dict = {}
     log_dict.update({f'{prefix}_ce': ce})
-    log_dict.update({f'{prefix}_ACC#' + label_names[(x + 1)  // 2] + ('_B' if x % 2 == 1 else '_I'): accs[x]
+    log_dict.update({f'{prefix}_ACC#' + class_names[(x + 1)  // 2] + ('_B' if x % 2 == 1 else '_I'): accs[x]
                     for x in range(1, 15)})
     log_dict.update({f'{prefix}_ACC#' + 'None': accs[0], f'{prefix}_ACC#' + 'ALL': accs[-1]})
     log_dict.update({f'{prefix}_A_' + 'B': accs[1:-1:2].mean(), f'{prefix}_A_' + 'I': accs[:-1:2].mean(),
@@ -153,28 +153,31 @@ def make_match_dict(ce, accs, labels, label_names, prefix, extras=None):
 
     if extras is not None:
         f1s, rec, prec = extras
-        log_dict.update({f'{prefix}_F1_{label_names[(ix + 1) // 2]}': f1s[ix]
+        log_dict.update({f'{prefix}_F1_{class_names[(ix + 1) // 2]}': f1s[ix]
                          for ix in range(1, 8)})
         log_dict.update({f'{prefix}_MacroF1': f1s[0]})
-        log_dict.update({f'{prefix}_Rec_{label_names[(ix + 1) // 2]}': rec[ix - 1]
+        log_dict.update({f'{prefix}_Rec_{class_names[(ix + 1) // 2]}': rec[ix - 1]
                          for ix in range(1, 8)})
-        log_dict.update({f'{prefix}_Prec_{label_names[(ix + 1) // 2]}': prec[ix - 1]
+        log_dict.update({f'{prefix}_Prec_{class_names[(ix + 1) // 2]}': prec[ix - 1]
                          for ix in range(1, 8)})
     return log_dict
 
-def calc_acc(raw_ps, raw_labels, valid_mask):
+def calc_acc(raw_preds, raw_labels, valid_mask):
     valid_mask = (valid_mask > 0).float()
     all_matches = torch.zeros(16)
     all_labels = torch.zeros(16)
-    ps = raw_ps.argmax(-1)
+
+    preds = raw_preds.argmax(-1)
     labels = raw_labels.argmax(-1) - (1 - valid_mask)
-    matched = (ps == labels)
-    for x in range(15):
-        class_mask = labels==x
+
+    matched = (preds == labels)
+    for class_i in range(15):
+        class_mask = labels == class_i
         class_labels = (class_mask).sum()
         class_matches = (matched[class_mask].sum())
-        all_matches[x] = class_matches
-        all_labels[x] = class_labels
+        all_matches[class_i] = class_matches
+        all_labels[class_i] = class_labels
+
     all_matches[-1] = matched.sum()
     all_labels[-1] = valid_mask.sum()
 

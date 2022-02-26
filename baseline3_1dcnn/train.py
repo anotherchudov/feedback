@@ -1,3 +1,4 @@
+from pickletools import optimize
 import warnings
 import sys
 warnings.filterwarnings('ignore')
@@ -32,6 +33,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 def get_config():
     parser = argparse.ArgumentParser(description="use huggingface models")
     parser.add_argument("--wandb_user", default='ducky', type=str)
+    parser.add_argument("--wandb_project", default='feedback_deberta_large', type=str)
     parser.add_argument("--dataset_path", default='../../feedback-prize-2021', type=str)
     parser.add_argument("--seed", default=0, type=int)
     parser.add_argument("--min_len", default=0, type=int)
@@ -59,12 +61,12 @@ def get_config():
     parser.add_argument("--val_fold", default=0, type=int)
     parser.add_argument("--num_worker", default=8, type=int)
     parser.add_argument("--model_name", default="microsoft/deberta-v3-large", type=str)
-    parser.add_argument("--local_rank", type=int, default=-1)
+    parser.add_argument("--local_rank", type=int, default=-1, help="do not modify!")
 
     args = parser.parse_args()
 
     if args.local_rank !=-1:
-        print('ddp local rank', args.local_rank)
+        print('[ DDP ] local rank', args.local_rank)
         torch.cuda.set_device(args.local_rank)
         dist.init_process_group(backend='nccl')
         args.device = torch.device("cuda", args.local_rank)
@@ -95,7 +97,7 @@ def seed_everything(seed):
 
 def wandb_setting(args):
     wandb.login()
-    run = wandb.init(entity=args.wandb_user, project='feedback_deberta_large')
+    run = wandb.init(entity=args.wandb_user, project=args.wandb_project)
     run.name = f'v3_fold{args.val_fold}_minlr{args.min_lr}_maxlr{args.lr}_wd{args.wd}_warmup{args.warmup_steps}_gradnorm{args.max_grad_norm}_biasdecay{args.decay_bias}_ls{args.label_smoothing}_wp{args.weights_pow}_data{args.dataset_version}_rce{args.rce_weight}'
 
 def get_data_files(args):
@@ -107,15 +109,17 @@ def get_data_files(args):
     data_splits = get_fold_data()
 
     # text_id example `16585724607E`
-    train_ids = [id_to_ix_map[text_id] for fold in range(5) if fold != args.val_fold for text_id in data_splits[args.seed][250]['normed'][fold]]
-    val_files = data_splits[args.seed][250]['normed'][args.val_fold]
-    val_ids = [id_to_ix_map[text_id] for text_id in val_files]
+    train_text_ids = [text_id for fold in range(5) if fold != args.val_fold for text_id in data_splits[args.seed][250]['normed'][fold]]
+    val_text_ids = data_splits[args.seed][250]['normed'][args.val_fold]
 
-    return all_texts, token_weights, data, csv, train_ids, val_ids, val_files
+    train_ids = [id_to_ix_map[text_id] for text_id in train_text_ids]
+    val_ids = [id_to_ix_map[text_id] for text_id in val_text_ids]
 
-def get_dataloader(train_ids, val_ids, data, csv, all_texts, val_files, label_names, token_weights, args):
+    return all_texts, token_weights, data, csv, train_ids, val_ids, train_text_ids, val_text_ids
+
+def get_dataloader(train_ids, val_ids, data, csv, all_texts, val_text_ids, class_names, token_weights, args):
     train_dataset = TrainDataset(train_ids, data, args.label_smoothing, token_weights, args.data_prefix)
-    val_dataset = ValDataset(val_ids, data, csv, all_texts, val_files, label_names, token_weights)
+    val_dataset = ValDataset(val_ids, data, csv, all_texts, val_text_ids, class_names, token_weights)
 
     train_dataloader = DataLoader(train_dataset, collate_fn=train_collate_fn, batch_size=args.batch_size, num_workers=args.num_worker)
     val_dataloader = DataLoader(val_dataset, collate_fn=val_collate_fn, batch_size=args.batch_size, num_workers=8, persistent_workers=True)
@@ -141,8 +145,8 @@ def get_model(args, train_dataloader):
             # except above
             weights.append(p)
 
-    opt = torch.optim.AdamW([{'params': weights, 'weight_decay': args.wd, 'lr': 0},
-                             {'params': biases, 'weight_decay': 0 if not args.decay_bias else args.wd, 'lr': 0}])
+    optimizer = torch.optim.AdamW([{'params': weights, 'weight_decay': args.wd, 'lr': 0},
+                                   {'params': biases, 'weight_decay': 0 if not args.decay_bias else args.wd, 'lr': 0}])
 
     lr_schedule = np.r_[np.linspace(0, args.lr, args.warmup_steps),
                     (np.cos(np.linspace(0, np.pi, len(train_dataloader)*args.epochs - args.warmup_steps)) * .5 + .5) * (args.lr - args.min_lr)
@@ -154,24 +158,31 @@ def get_model(args, train_dataloader):
         model = DDP(model, device_ids=[args.local_rank], output_device=args.local_rank)
         model.to(args.device)
 
-    return model, opt, lr_schedule
+    return model, optimizer, lr_schedule
 
 if __name__ == "__main__":
     seed_everything(42)
     args = get_config()
     wandb_setting(args)
 
-    label_names = ['None', 'Lead', 'Position', 'Evidence', 'Claim', 'Concluding Statement', 'Counterclaim', 'Rebuttal']
+    class_names = ['None',
+                   'Lead',
+                   'Position',
+                   'Evidence',
+                   'Claim',
+                   'Concluding Statement',
+                   'Counterclaim',
+                   'Rebuttal']
 
     # data
-    all_texts, token_weights, data, csv, train_ids, val_ids, val_files = get_data_files(args)
-    train_dataloader, val_dataloader = get_dataloader(train_ids, val_ids, data, csv, all_texts, val_files, label_names, token_weights, args)
+    all_texts, token_weights, data, csv, train_ids, val_ids, train_text_ids, val_text_ids = get_data_files(args)
+    train_dataloader, val_dataloader = get_dataloader(train_ids, val_ids, data, csv, all_texts, val_text_ids, class_names, token_weights, args)
 
     # model
-    model, opt, lr_schedule = get_model(args, train_dataloader)
+    model, optimizer, lr_schedule = get_model(args, train_dataloader)
 
     # train
-    trainer = Trainer(model, train_dataloader, val_dataloader, lr_schedule, opt, label_names, "result/noSWA", args)
+    trainer = Trainer(model, train_dataloader, val_dataloader, lr_schedule, optimizer, class_names, "result/noSWA", args)
     best_score = trainer.train()
 
     print(best_score)

@@ -1,57 +1,61 @@
-import torch
+
 import numpy as np
 import wandb
-from tqdm import tqdm
+
+from tqdm.auto import tqdm
+
+import torch
 from torch.cuda.amp import autocast, GradScaler
 
 from .utils import calc_acc, process_sample, make_match_dict
 
 class Trainer():
-    def __init__(self, model, train_loader, valid_loader, lr_schedule, opt, label_names, save_path, args):
+    def __init__(self, model, train_loader, valid_loader, lr_schedule, optimizer, class_names, save_path, args):
         self.model = model
         self.train_loader = train_loader
         self.valid_loader = valid_loader
         self.lr_schedule = lr_schedule
-        self.opt = opt
-        self.label_names = label_names
+        self.optimizer = optimizer
+        self.class_names = class_names
         self.save_path = save_path
         self.args = args
     
     def train_one_epoch(self, step):
-        ls = []
+        losses = []
         train_matches = torch.zeros(16)
         train_labels = torch.zeros(16)
 
-        pbar = tqdm(enumerate(self.train_loader), total=len(self.train_loader), position=0, leave=True)
         if self.args.global_attn == 0:
             model_params = [p for n, p in self.model.named_parameters() if not (n.endswith('_global.bias') or n.endswith('_global.weight'))]
         else:
             model_params = [p for p in self.model.parameters()]
         
         scaler = torch.cuda.amp.GradScaler(init_scale=65536.0/self.args.grad_acc_steps)
+        pbar = tqdm(enumerate(self.train_loader), total=len(self.train_loader), position=0, leave=True)
         for step_, batch in pbar:
             if step_ % self.args.grad_acc_steps == 0:
-                for ix in range(len(self.opt.param_groups)):
-                    self.opt.param_groups[ix]['lr'] = self.lr_schedule[step]
-                self.opt.zero_grad()
+                for ix in range(len(self.optimizer.param_groups)):
+                    self.optimizer.param_groups[ix]['lr'] = self.lr_schedule[step]
+                self.optimizer.zero_grad()
             
             tokens, mask, label, label_mask = (x.cuda() for x in batch)
             with torch.cuda.amp.autocast():
                 outs = self.model(tokens, mask)
 
+            # loss function - cross entropy loss & rce loss
             ce = -(((outs * label).sum(-1) * label_mask).sum(-1) / label_mask.sum(-1)).mean()
             if self.args.rce_weight == 0:
-                l = ce
+                loss = ce
             else:
                 rce = -(((torch.exp(outs) * torch.log_softmax(label, -1)).sum(-1) * label_mask).sum(-1) / label_mask.sum(-1)).mean()
-                l = ce * self.args.ce_weight + rce * self.args.rce_weight    
+                loss = ce * self.args.ce_weight + rce * self.args.rce_weight    
             
-            scaler.scale(l).backward()
-            ls.append(l.detach())
+            scaler.scale(loss).backward()
+            losses.append(loss.detach())
         
             if step_ % self.args.grad_acc_steps == self.args.grad_acc_steps - 1:
                 if self.args.max_grad_norm is not None:
-                    scaler.unscale_(self.opt)
+                    scaler.unscale_(self.optimizer)
                     norm = torch.norm(torch.stack([torch.norm(p.grad.detach()) for p in model_params]))
                     # norms.append(norm)
                     if torch.isfinite(norm):
@@ -59,7 +63,7 @@ class Trainer():
                         for p in model_params:
                             p.grad.detach().mul_(grad_mult)
 
-                scaler.step(self.opt)#.step()
+                scaler.step(self.optimizer)#.step()
                 scaler.update()
 
                 with torch.no_grad():
@@ -67,7 +71,7 @@ class Trainer():
                     train_matches += match_updates[0]
                     train_labels += match_updates[1]
                 
-                description = f"TRAIN  STEP {step} loss: {torch.stack(ls).mean().item(): .4f}"
+                description = f"TRAIN  STEP {step} loss: {torch.stack(losses).mean().item(): .4f}"
                 pbar.set_description(description)
 
             step += 1
@@ -123,7 +127,7 @@ class Trainer():
             print(val_score)
 
             log_dict = {}
-            log_dict.update(make_match_dict(val_ce, val_accs, val_labels, self.label_names, f'ValSWA', (f1s, rec, prec)))
+            log_dict.update(make_match_dict(val_ce, val_accs, val_labels, self.class_names, f'ValSWA', (f1s, rec, prec)))
             wandb.log(log_dict) 
 
             if best_val_score >= val_score:
