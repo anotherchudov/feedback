@@ -1,33 +1,35 @@
-from pickletools import optimize
+
 import warnings
-import sys
 warnings.filterwarnings('ignore')
 
-import argparse
 import os
 import os.path as osp
+import sys
 import random
 
-import torch
+import argparse
 import wandb
 import pandas as pd
 import numpy as np
+from pickletools import optimize
 
+import torch
 import torch.nn as nn
 import torch.distributed as dist
 
-from ast import literal_eval
-from torch.utils.data import DataLoader
-from torch.nn.parallel import DistributedDataParallel as DDP
-
 from transformers import AutoConfig, AutoModel, AutoTokenizer, AutoModelForTokenClassification
-from transformers import get_cosine_with_hard_restarts_schedule_with_warmup
 
-from module.utils import *
-from module.dataset import *
+# local codes
+from module.utils import get_data_files
+from module.dataset import get_dataloader
+from module.loss import get_criterion
+from module.optimizer import get_optimizer
+from module.scheduler import get_scheduler
+from model.model import get_model
+
 from module.trainer import Trainer
-from model.model import TvmLongformer
 
+# Hugging Face's Issue
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def get_config():
@@ -38,12 +40,9 @@ def get_config():
     parser.add_argument("--save_path", default='result', type=str)
     parser.add_argument("--seed", default=0, type=int)
     parser.add_argument("--min_len", default=0, type=int)
-    parser.add_argument("--weight_decay", default=1e-2, type=float)
-    parser.add_argument("--weights_pow", default=0.1, type=float)
     parser.add_argument("--use_groupped_weights", default=False, type=bool)
     parser.add_argument("--global_attn", default=False, type=int)
     parser.add_argument("--label_smoothing", default= 0.1, type=float)
-    parser.add_argument("--extra_dense", default= False, type=bool)
     parser.add_argument("--epochs", default=9, type=int)
     parser.add_argument("--batch_size", default=4, type=int)
     parser.add_argument("--grad_acc_steps", default=2, type=int)
@@ -51,19 +50,27 @@ def get_config():
     parser.add_argument("--data_prefix", default='', type=str)
     parser.add_argument("--max_grad_norm", default=35 * 8, type=int)
     parser.add_argument("--start_eval_at", default=0, type=int)
-    parser.add_argument("--lr", default=32e-6, type=float)
-    parser.add_argument("--min_lr", default=32e-6, type=float)
+    parser.add_argument("--lr", default=3e-5, type=float)
+    parser.add_argument("--min_lr", default=3e-5, type=float)
+    parser.add_argument("--weight_decay", default=1e-2, type=float)
+    parser.add_argument("--weights_pow", default=0.1, type=float)
     parser.add_argument("--dataset_version", default=2, type=int)
     parser.add_argument("--warmup_steps", default=500, type=int)
-    parser.add_argument("--rce_weight", default=0.1, type=float)
-    parser.add_argument("--ce_weight", default=0.9, type=float)
-    parser.add_argument("--dropout_ratio", default=0.0, type=float)
     parser.add_argument("--decay_bias", default=False, type=bool)
     parser.add_argument("--val_fold", default=0, type=int)
     parser.add_argument("--num_worker", default=8, type=int)
-    parser.add_argument("--model_name", default="microsoft/deberta-v3-large", type=str)
     parser.add_argument("--local_rank", type=int, default=-1, help="do not modify!")
     parser.add_argument("--device", type=int, default=0, help="select the gpu device to train")
+
+    # optimizer
+    parser.add_argument("--rce_weight", default=0.1, type=float)
+    parser.add_argument("--ce_weight", default=0.9, type=float)
+
+    # model related arguments
+    parser.add_argument("--model", default="microsoft/deberta-v3-large", type=str)
+    parser.add_argument("--cnn1d", default=False, type=bool)
+    parser.add_argument("--extra_dense", default= False, type=bool)
+    parser.add_argument("--dropout_ratio", default=0.0, type=float)
 
     args = parser.parse_args()
 
@@ -82,9 +89,8 @@ def get_config():
         args.ddp = True
     else:
         args.device = torch.device("cuda", args.device)
-        args.rank = 0
+        args.rank = -1
         args.ddp = False
-
 
     return args
 
@@ -102,69 +108,19 @@ def wandb_setting(args):
     run = wandb.init(entity=args.wandb_user, project=args.wandb_project)
     run.name = f'v3_fold{args.val_fold}_minlr{args.min_lr}_maxlr{args.lr}_wd{args.weight_decay}_warmup{args.warmup_steps}_gradnorm{args.max_grad_norm}_biasdecay{args.decay_bias}_ls{args.label_smoothing}_wp{args.weights_pow}_data{args.dataset_version}_rce{args.rce_weight}'
 
-def get_data_files(args):
-    token_weights = get_token_weights(args.use_groupped_weights, args.weights_pow)
-    data = get_prepare_data()
-    csv = pd.read_csv(osp.join(args.dataset_path, 'train.csv'))
-    all_texts = get_all_texts(args)
-    id_to_ix_map = get_id_to_ix_map()
-    data_splits = get_fold_data()
-
-    # text_id example `16585724607E`
-    train_text_ids = [text_id for fold in range(5) if fold != args.val_fold for text_id in data_splits[args.seed][250]['normed'][fold]]
-    val_text_ids = data_splits[args.seed][250]['normed'][args.val_fold]
-
-    train_ids = [id_to_ix_map[text_id] for text_id in train_text_ids]
-    val_ids = [id_to_ix_map[text_id] for text_id in val_text_ids]
-
-    return all_texts, token_weights, data, csv, train_ids, val_ids, train_text_ids, val_text_ids
-
-def get_dataloader(train_ids, val_ids, data, csv, all_texts, val_text_ids, class_names, token_weights, args):
-    train_dataset = TrainDataset(train_ids, data, args.label_smoothing, token_weights, args.data_prefix)
-    val_dataset = ValDataset(val_ids, data, csv, all_texts, val_text_ids, class_names, token_weights)
-
-    train_dataloader = DataLoader(train_dataset, collate_fn=train_collate_fn, batch_size=args.batch_size, num_workers=args.num_worker)
-    val_dataloader = DataLoader(val_dataset, collate_fn=val_collate_fn, batch_size=args.batch_size, num_workers=8, persistent_workers=True)
-
-    return train_dataloader, val_dataloader
-
-def get_model(args, train_dataloader):
-    model = TvmLongformer(args).to(args.device)
-
-    # dropout layer
-    for m in model.modules():
-        if isinstance(m, torch.nn.Dropout):
-            m.p = args.dropout_ratio
-
-    # ...
-    weights = []
-    biases = []
-    for n, p in model.named_parameters():
-        if n.startswith('feats.embeddings') or 'LayerNorm' in n or n.endswith('bias'):
-            # embedding layer & bias layer
-            biases.append(p)
-        else:
-            # except above
-            weights.append(p)
-
-    optimizer = torch.optim.AdamW([{'params': weights, 'weight_decay': args.weight_decay, 'lr': 0},
-                                   {'params': biases, 'weight_decay': 0 if not args.decay_bias else args.weight_decay, 'lr': 0}])
-
-    lr_schedule = np.r_[np.linspace(0, args.lr, args.warmup_steps),
-                    (np.cos(np.linspace(0, np.pi, len(train_dataloader)*args.epochs - args.warmup_steps)) * .5 + .5) * (args.lr - args.min_lr)
-                    + args.min_lr]
-
-    
-    # distributed training
-    if args.ddp:
-        model = DDP(model, device_ids=[args.local_rank], output_device=args.local_rank)
-        model.to(args.device)
-
-    return model, optimizer, lr_schedule
 
 if __name__ == "__main__":
-    seed_everything(42)
+    """
+    supported model list
+    - microsoft/deberta-v3-large
+
+    DISCLAIMER:
+    - currently only support single GPU training
+    - arguments related to optimizer, scheduler, and loss function
+      are not supported and directly assigned at the beginning of the code
+    """
     args = get_config()
+    seed_everything(args.seed)
     wandb_setting(args)
 
     class_names = ['None',
@@ -182,14 +138,32 @@ if __name__ == "__main__":
 
     # data
     all_texts, token_weights, data, csv, train_ids, val_ids, train_text_ids, val_text_ids = get_data_files(args)
-    train_dataloader, val_dataloader = get_dataloader(train_ids, val_ids, data, csv, all_texts, val_text_ids, class_names, token_weights, args)
+    train_dataloader, val_dataloader = get_dataloader(args, train_ids, val_ids, data, csv, all_texts, val_text_ids, class_names, token_weights)
+
+    # loss
+    # args.criterion_list = ["crossentropy"]
+    # args.criterion_ratio = [1.]
+
+    args.criterion_list = ["custom_ce", "custom_rce"]
+    args.criterion_ratio = [args.ce_weight, args.rce_weight]
+    criterion = get_criterion(args)            
 
     # model
-    model, optimizer, lr_schedule = get_model(args, train_dataloader)
+    args.model = 'microsoft/deberta-v3-large'
+    model = get_model(args)
+
+    # optimizer
+    args.optimizer = "adamw"
+    optimizer = get_optimizer(args, model)
+
+    # scheduler
+    args.steps_per_epoch = len(train_dataloader)
+    args.scheduler = "custom_warmup"
+    scheduler = get_scheduler(args, optimizer)
 
     # train
-    trainer = Trainer(args, model, train_dataloader, val_dataloader, lr_schedule, optimizer, class_names)
-    best_score = trainer.train()
+    trainer = Trainer(args, model, train_dataloader, val_dataloader, scheduler, optimizer, criterion, class_names)
+    best_f1 = trainer.train()
 
-    print(best_score)
+    print(best_f1)
     

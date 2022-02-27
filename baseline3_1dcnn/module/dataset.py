@@ -1,6 +1,9 @@
+from random import shuffle
 import re
 import torch
 import numpy as np
+
+from torch.utils.data import DataLoader
 
 def split_predstring(predstring):
     vals = predstring.split()
@@ -106,3 +109,28 @@ class ValDataset(torch.utils.data.Dataset):
             index_map.append(current_word)
         
         return tokens, attention_mask, cbio_labels, class_weight, token_bounds, gt_dict, index_map, num_tokens
+
+first_batch = True
+def train_collate_fn(ins):
+    global first_batch
+    if first_batch:
+        max_len = 2048
+        first_batch = False
+    else:
+        max_len = (max(x[-1] for x in ins) + 7) // 8 * 8
+        
+    return tuple(torch.from_numpy(np.concatenate([ins[z][x][None, :max_len] for z in range(len(ins))])) for x in range(len(ins[0]) - 1))
+    
+def val_collate_fn(ins):
+    max_len = (max(x[-1] for x in ins) + 7) // 8 * 8
+    return tuple(torch.from_numpy(np.concatenate([ins[z][x][None, :max_len] for z in range(len(ins))])) for x in range(len(ins[0]) - 3)) + ([x[-3] for x in ins], [x[-2] for x in ins], np.array([x[-1] for x in ins]),)
+
+
+def get_dataloader(args, train_ids, val_ids, data, csv, all_texts, val_text_ids, class_names, token_weights):
+    train_dataset = TrainDataset(train_ids, data, args.label_smoothing, token_weights, args.data_prefix)
+    val_dataset = ValDataset(val_ids, data, csv, all_texts, val_text_ids, class_names, token_weights)
+
+    train_dataloader = DataLoader(train_dataset, collate_fn=train_collate_fn, batch_size=args.batch_size, num_workers=args.num_worker, shuffle=True)
+    val_dataloader = DataLoader(val_dataset, collate_fn=val_collate_fn, batch_size=args.batch_size, num_workers=8, persistent_workers=True)
+
+    return train_dataloader, val_dataloader

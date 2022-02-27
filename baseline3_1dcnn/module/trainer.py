@@ -8,19 +8,20 @@ from tqdm.auto import tqdm
 import torch
 from torch.cuda.amp import autocast, GradScaler
 
-from .utils import calc_acc, process_sample, make_match_dict
+from .metric import calc_acc, process_sample, make_match_dict
 
 class Trainer():
-    def __init__(self, args, model, train_loader, valid_loader, lr_schedule, optimizer, class_names):
+    def __init__(self, args, model, train_loader, valid_loader, scheduler, optimizer, criterion, class_names):
         self.args = args
         self.model = model
         self.train_loader = train_loader
         self.valid_loader = valid_loader
-        self.lr_schedule = lr_schedule
+        self.scheduler = scheduler
         self.optimizer = optimizer
+        self.criterion = criterion
         self.class_names = class_names
     
-    def train_one_epoch(self, step):
+    def train_one_epoch(self, epoch):
         self.model.train()
 
         losses = []
@@ -32,53 +33,44 @@ class Trainer():
         else:
             model_params = [p for p in self.model.parameters()]
         
-        scaler = torch.cuda.amp.GradScaler(init_scale=65536.0/self.args.grad_acc_steps)
-        pbar = tqdm(enumerate(self.train_loader), total=len(self.train_loader), position=0, leave=True)
-        for step_, batch in pbar:
-            if step_ % self.args.grad_acc_steps == 0:
-                for g_i in range(len(self.optimizer.param_groups)):
-                    self.optimizer.param_groups[g_i]['lr'] = self.lr_schedule[step]
+        scaler = GradScaler()
+        pbar = tqdm(enumerate(self.train_loader), total=len(self.train_loader))
+        for step, batch in pbar:
+
+            if (step + 1) % self.args.grad_acc_steps == 0:
                 self.optimizer.zero_grad()
             
             tokens, mask, label, class_weight = (x.to(self.args.device) for x in batch)
-            with torch.cuda.amp.autocast():
+            with autocast():
                 outs = self.model(tokens, mask)
+                loss = self.criterion(outs, label, class_weight=class_weight)
+                loss = loss / self.args.grad_acc_steps
 
-            # loss function - cross entropy loss & rce loss
-            ce = -(((outs * label).sum(-1) * class_weight).sum(-1) / class_weight.sum(-1)).mean()
-            if self.args.rce_weight == 0:
-                loss = ce
-            else:
-                rce = -(((torch.exp(outs) * torch.log_softmax(label, -1)).sum(-1) * class_weight).sum(-1) / class_weight.sum(-1)).mean()
-                loss = ce * self.args.ce_weight + rce * self.args.rce_weight    
-            
+            # loss backward
             scaler.scale(loss).backward()
             losses.append(loss.detach())
         
-            if step_ % self.args.grad_acc_steps == self.args.grad_acc_steps - 1:
+            # optimizer
+            if (step + 1) % self.args.grad_acc_steps == 0:
                 if self.args.max_grad_norm is not None:
                     scaler.unscale_(self.optimizer)
-                    norm = torch.norm(torch.stack([torch.norm(p.grad.detach()) for p in model_params]))
-                    # norms.append(norm)
-                    if torch.isfinite(norm):
-                        grad_mult = (self.args.max_grad_norm / (norm + 1e-6)).clamp(max=1.)
-                        for p in model_params:
-                            p.grad.detach().mul_(grad_mult)
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_grad_norm)
 
-                scaler.step(self.optimizer)#.step()
+                scaler.step(self.optimizer)
                 scaler.update()
 
-                with torch.no_grad():
-                    match_updates = calc_acc(outs, label, class_weight)
-                    train_matches += match_updates[0]
-                    train_labels += match_updates[1]
-                
-                description = f"TRAIN  STEP {step} loss: {torch.stack(losses).mean().item(): .4f}"
-                pbar.set_description(description)
+            # scheduler
+            for g_i in range(len(self.optimizer.param_groups)):
+                self.optimizer.param_groups[g_i]['lr'] = self.scheduler[step]
 
-            step += 1
-        
-        return step
+            with torch.no_grad():
+                match_updates = calc_acc(outs, label, class_weight)
+                train_matches += match_updates[0]
+                train_labels += match_updates[1]
+            
+            description = f"TRAIN EPOCH {epoch} loss: {torch.stack(losses).mean().item(): .4f}"
+            pbar.set_description(description)
+
     
     def valid_one_epoch(self, epoch):
         self.model.eval()
@@ -94,11 +86,10 @@ class Trainer():
         for tokens, mask, labels, labels_mask, bounds, gt_dicts, index_map, num_tokens in tqdm(self.valid_loader, total=len(self.valid_loader)):
             with torch.no_grad():
                 tokens, mask, label, class_weight = (x.to(self.args.device) for x in (tokens, mask, labels, labels_mask))
-                with torch.cuda.amp.autocast():
+                with autocast():
                     outs = self.model(tokens, mask)
-
-                loss = -(((outs.float() * label).sum(-1) * class_weight).sum(-1) / class_weight.sum(-1)).mean()
-                losses.append(loss)
+                    loss = self.criterion(outs, label, class_weight=class_weight)
+                    losses.append(loss)
 
                 match_updates = calc_acc(outs, label, class_weight)
                 val_matches += match_updates[0]
@@ -123,16 +114,13 @@ class Trainer():
     def train(self):
 
         best_f1 = 0
-        global_step = 0
-        for epoch in range(self.args.epochs):
+        for epoch in range(1, self.args.epochs + 1):
 
             # train
-            global_step = self.train_one_epoch(global_step)
+            self.train_one_epoch(epoch)
 
             # validation
-            torch.autograd.set_grad_enabled(False)
             val_ce, val_accs, val_labels, f1s, rec, prec = self.valid_one_epoch(epoch)
-            torch.autograd.set_grad_enabled(True)
             val_score = f1s[0]
 
             print(f'{val_score}')
