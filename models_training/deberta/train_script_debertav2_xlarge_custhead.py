@@ -36,8 +36,6 @@ ce_weight = 1 - rce_weight
 decay_bias = False
 eval_interval = 200
     
-sys.path.append('longformer/tvm/python/')
-sys.path.append('longformer/')
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = gpun
 import torch as t
