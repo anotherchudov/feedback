@@ -56,7 +56,7 @@ class DebertaV3Large(torch.nn.Module):
         else:
             output = self.class_projector(transformer_output) # batch, seq, hidden
 
-        return torch.log_softmax(output, -1)
+        return output
 
 
 def get_model(args):

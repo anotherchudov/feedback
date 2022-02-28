@@ -4,11 +4,17 @@ from torch import nn
 
 
 def custom_ce(preds, gts, class_weight):
+    preds = torch.log_softmax(preds, -1)
     loss = -(((preds * gts).sum(-1) * class_weight).sum(-1) / class_weight.sum(-1)).mean()
 
     return loss
 
 def custom_rce(preds, gts, class_weight):
+    """Reverse Cross Entropy
+    Later considering using the code from
+    https://github.com/HanxunH/SCELoss-Reproduce
+    """
+    preds = torch.log_softmax(preds, -1)
     loss = -(((torch.exp(preds) * torch.log_softmax(gts, -1)).sum(-1) * class_weight).sum(-1) / class_weight.sum(-1)).mean()
 
     return loss
@@ -32,6 +38,10 @@ class Criterion():
                 criterions.append(custom_rce)
                 
         return criterions
+
+    def reshape(self, preds, gts):
+        """TODO: fix the dataloader to argmax label version and change this code"""
+        return preds.view(-1, 15), gts.argmax(-1).view(-1)
     
     def calculate_loss(self, preds, gts, class_weight=None):
         total_loss = 0
@@ -39,7 +49,9 @@ class Criterion():
             if criterion_name in ['custom_ce', 'custom_rce']:
                 current_loss = criterion(preds, gts, class_weight)
             else:
-                current_loss = criterion(preds, gts)
+                # TODO: tailored for current dataloader
+                preds_, gts_ = self.reshape(preds, gts)
+                current_loss = criterion(preds_, gts_)
             total_loss = total_loss + current_loss * ratio
 
         return total_loss

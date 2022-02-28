@@ -144,7 +144,10 @@ if __name__ == "__main__":
     # args.criterion_list = ["crossentropy"]
     # args.criterion_ratio = [1.]
 
-    args.criterion_list = ["custom_ce", "custom_rce"]
+    # args.criterion_list = ["custom_ce", "custom_rce"]
+    # args.criterion_ratio = [args.ce_weight, args.rce_weight]
+
+    args.criterion_list = ["crossentropy", "custom_rce"]
     args.criterion_ratio = [args.ce_weight, args.rce_weight]
     criterion = get_criterion(args)            
 

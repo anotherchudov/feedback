@@ -63,6 +63,7 @@ class Trainer():
             for g_i in range(len(self.optimizer.param_groups)):
                 self.optimizer.param_groups[g_i]['lr'] = self.scheduler[step]
 
+            # metric
             with torch.no_grad():
                 match_updates = calc_acc(outs, label, class_weight)
                 train_matches += match_updates[0]
