@@ -156,8 +156,8 @@ if __name__ == "__main__":
     # args.class_weight = torch.Tensor(token_weights).to(args.device).half()
     args.criterion_list = ["custom_ce", "custom_rce"]
     args.criterion_ratio = [args.ce_weight, args.rce_weight]
-    args.criterion_list = ["focal"]
-    args.criterion_ratio = [1.]
+    # args.criterion_list = ["focal"]
+    # args.criterion_ratio = [1.]
     criterion = get_criterion(args)            
 
     # model
@@ -173,11 +173,11 @@ if __name__ == "__main__":
     args.steps_per_epoch = len(train_dataloader)
     args.scheduler = "plateau"
     args.scheduler = "custom_warmup"
-    # args.scheduler = "cosine"
+    args.scheduler = "cosine"
     scheduler = get_scheduler(args, optimizer)
 
     # swa
-    args.swa = False
+    args.swa = True
 
     # train
     trainer = Trainer(args, model, train_dataloader, val_dataloader, scheduler, optimizer, criterion, class_names)

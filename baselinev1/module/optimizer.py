@@ -26,8 +26,8 @@ def get_optimizer(args, model):
                 # except above
                 weights.append(p)
 
-        optimizer = AdamW([{'params': weights, 'weight_decay': args.weight_decay, 'lr': 0},
-                           {'params': biases, 'weight_decay': 0 if not args.decay_bias else args.weight_decay, 'lr': 0}])
+        optimizer = AdamW([{'params': weights, 'weight_decay': args.weight_decay, 'lr': args.lr},
+                           {'params': biases, 'weight_decay': 0 if not args.decay_bias else args.weight_decay, 'lr': args.lr}])
 
     
     optimizer.zero_grad()
