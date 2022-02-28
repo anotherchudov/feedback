@@ -332,13 +332,14 @@ val_dataset = t.utils.data.DataLoader(ValDataset(val_ids), collate_fn=val_collat
                                       persistent_workers=True)
 
 model = TvmLongformer().cuda()
+dropout_class = type(model.feats.embeddings.dropout)
 for m in model.modules():
-    if isinstance(m, t.nn.Dropout):
-        m.p = 0
+    if isinstance(m, dropout_class):
+        m.drop_prob = 0
 for l in model.feats.encoder.layer:
-    l.attention.self.dropout.p = d1
-    l.attention.output.dropout.p = d2
-    l.output.dropout.p = d3
+    l.attention.self.dropout.drop_prob = d1
+    l.attention.output.dropout.drop_prob = d2
+    l.output.dropout.drop_prob = d3
         
 weights = []
 biases = []
