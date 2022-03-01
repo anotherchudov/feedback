@@ -4,6 +4,8 @@ from torch.optim import SGD
 from torch.optim import Adam
 from torch.optim import AdamW
 
+from transformers.optimization import Adafactor
+
 
 def get_optimizer(args, model):
     if args.optimizer == 'sgd':
@@ -28,7 +30,20 @@ def get_optimizer(args, model):
 
         optimizer = AdamW([{'params': weights, 'weight_decay': args.weight_decay, 'lr': args.lr},
                            {'params': biases, 'weight_decay': 0 if not args.decay_bias else args.weight_decay, 'lr': args.lr}])
-
+                           
+    elif args.optimizer == 'adafactor':
+        optimizer = Adafactor(
+            model.parameters(),
+            lr=args.lr,
+            eps=(1e-30, 1e-3),
+            clip_threshold=args.max_grad_norm,
+            decay_rate=-0.8,
+            beta1=None,
+            weight_decay=0.0,
+            relative_step=False,
+            scale_parameter=False,
+            warmup_init=False,
+        )
     
     optimizer.zero_grad()
     

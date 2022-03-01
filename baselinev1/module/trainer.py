@@ -31,7 +31,10 @@ class Trainer():
         self.save_model = self.model
     
     def set_swa(self):
-        """Setting for Stochastic Weighted Average"""
+        """Setting for Stochastic Weighted Average
+        
+        will use the scheduler that is already provided
+        """
         # global_step - the total steps among the whole training
         # swa_step - the step after the first update of the swa model
         self.global_step = 0
@@ -39,16 +42,21 @@ class Trainer():
 
         # SWA - stochastic weight averaging
         self.swa_model = AveragedModel(self.model)
-        self.swa_scheduler = SWALR(self.optimizer,
-                                   swa_lr=self.args.lr,
-                                   anneal_epochs=self.args.steps_per_epoch,
-                                   anneal_strategy='cos')
+        # self.swa_scheduler = SWALR(self.optimizer,
+        #                            swa_lr=self.args.lr,
+        #                            anneal_epochs=self.args.steps_per_epoch,
+        #                            anneal_strategy='cos')
 
-        # SWA starts after 1.5 cycle of epochs
-        # this setting is tailored to Cosine Annealing scheduler
-        # which hits the minimum at 1.5 cycle
+        # When to start SWA?
+        # setting aims to start swa when learning rate hits the minimum
         half_cycle_steps = self.args.steps_per_epoch // 2
-        self.swa_start = half_cycle_steps * 3
+        if self.args.scheduler in ['plateau',
+                                   'custom_warmup',
+                                   'cosine_annealing_warmup_restart']:
+            cycle_n = 2
+        elif self.args.scheduler in ['cosine_annealing']:
+            cycle_n = 3
+        self.swa_start = half_cycle_steps * cycle_n
 
         # swa will be saved every steps
         self.swa_save_per_steps = self.args.steps_per_epoch // self.args.swa_update_per_epoch
@@ -64,15 +72,18 @@ class Trainer():
         if (self.global_step + 1) > self.swa_start:
             if self.swa_step == 0:
                 self.swa_model.update_parameters(self.model)
-                self.run_scheduler = False
                 self.save_model = self.swa_model.module
+                # self.run_scheduler = False
             elif (self.swa_step + 1) % self.swa_save_per_steps == 0:
                 self.swa_model.update_parameters(self.model)
 
-            self.swa_scheduler.step()
+            # self.swa_scheduler.step()
             self.swa_step += 1
 
         self.global_step += 1
+
+    def lr(self):
+        return self.optimizer.param_groups[0]['lr']
 
     def train_one_epoch(self, epoch):
         self.model.train()
@@ -112,15 +123,18 @@ class Trainer():
                 scaler.step(self.optimizer)
                 scaler.update()
 
-            # SWA -stochastic weight averaging
-            """swa handles scheduler also"""
+            # SWA - stochastic weight averaging
+            """swa scheduler is disabled"""
             if self.args.swa:
                 self.process_swa()
 
             # scheduler
-            if self.run_scheduler and self.args.scheduler == 'custom_warmup':
-                for g_i in range(len(self.optimizer.param_groups)):
-                    self.optimizer.param_groups[g_i]['lr'] = self.scheduler[step]
+            if self.run_scheduler:
+                if self.args.scheduler == 'custom_warmup':
+                    for g_i in range(len(self.optimizer.param_groups)):
+                        self.optimizer.param_groups[g_i]['lr'] = self.scheduler[step]
+                elif self.args.scheduler not in ['plateau']:
+                    self.scheduler.step()
 
             # metric
             with torch.no_grad():
@@ -134,7 +148,7 @@ class Trainer():
                 if (step + 1) % self.args.print_acc == 0:
                     print(f'Epoch: {epoch} | Step: {step + 1} | Train Acc per class: {train_acc_per_class}')
             
-            description = f"TRAIN EPOCH {epoch} acc: {train_acc:.4f} loss: {torch.stack(losses).mean().item(): .4f}"
+            description = f"[ TRAIN ] epoch {epoch} lr {self.lr():.7f} acc: {train_acc:.4f} loss: {torch.stack(losses).mean().item(): .4f}"
             pbar.set_description(description)
 
         return train_acc
@@ -168,6 +182,12 @@ class Trainer():
                                                     index_map[sample_ix], bounds[sample_ix],
                                                     gt_dicts[sample_ix],
                                                     num, match_stats, min_len=self.args.min_len)
+
+        # validation Acc per class log
+        valid_acc_per_class = val_matches / val_labels
+        valid_acc = valid_acc_per_class.mean().item()
+        print(f'Valid Acc per class: {valid_acc_per_class}')
+
         for ix in range(1, 8):
             f1s[ix] = match_stats[ix]['tp'] / (1e-7 + match_stats[ix]['tp'] + .5 * (match_stats[ix]['fp'] + match_stats[ix]['fn']))
             rec[ix - 1] = match_stats[ix]['tp'] / (1e-7 + match_stats[ix]['tp'] + match_stats[ix]['fn'])
@@ -204,6 +224,7 @@ class Trainer():
                 torch.save(self.save_model.state_dict(), osp.join(self.args.save_path, save_name))
                 print("save model .....")
 
+            # scheduler
             if self.run_scheduler and self.args.scheduler == 'plateau':
                 self.scheduler.step(best_f1)
         

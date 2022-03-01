@@ -35,8 +35,6 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def get_config():
     parser = argparse.ArgumentParser(description="use huggingface models")
-    parser.add_argument("--wandb_user", default='ducky', type=str)
-    parser.add_argument("--wandb_project", default='feedback_deberta_large', type=str)
     parser.add_argument("--dataset_path", default='../../feedback-prize-2021', type=str)
     parser.add_argument("--save_path", default='result', type=str)
     parser.add_argument("--seed", default=0, type=int)
@@ -60,7 +58,10 @@ def get_config():
     parser.add_argument("--device", type=int, default=0, help="select the gpu device to train")
 
     # logging
-    parser.add_argument("--print_acc", default=100, type=int, help="print accuracy of each class every `print_acc` steps")
+    parser.add_argument("--wandb_user", default='ducky', type=str)
+    parser.add_argument("--wandb_project", default='feedback_deberta_large', type=str)
+    parser.add_argument("--wandb_comment", default="", type=str, help="comment will be added at the back of wandb project name")
+    parser.add_argument("--print_acc", default=500, type=int, help="print accuracy of each class every `print_acc` steps")
 
     # optimizer
     parser.add_argument("--label_smoothing", default=0.1, type=float)
@@ -68,19 +69,23 @@ def get_config():
     parser.add_argument("--ce_weight", default=0.9, type=float)
     parser.add_argument("--nesterov", default=True, type=bool, help="use nesterov for SGD")
     parser.add_argument("--momentum", default=0.9, type=float, help="momentum for SGD")
-    parser.add_argument("--swa", default=False, type=bool, help="use stochastic weight averaging")
-    parser.add_argument("--swa_update_per_epoch", default=3, type=int)
 
     # scheduler
     parser.add_argument("--lr", default=3e-5, type=float)
-    parser.add_argument("--min_lr", default=3e-5, type=float)
+    parser.add_argument("--min_lr", default=1e-6, type=float)
     parser.add_argument("--warmup_steps", default=500, type=int)
+    parser.add_argument("--gamma", default=0.8, type=float, help="gamma for cosine annealing warmup restart scheduler")
+    parser.add_argument("--cycle_mult", default=1.0, type=float, help="cycle length adjustment for cosine annealing warmup restart scheduler")
 
     # model related arguments
     parser.add_argument("--model", default="microsoft/deberta-v3-large", type=str)
     parser.add_argument("--cnn1d", default=False, type=bool)
     parser.add_argument("--extra_dense", default= False, type=bool)
     parser.add_argument("--dropout_ratio", default=0.0, type=float)
+
+    # swa
+    parser.add_argument("--swa", action="store_true", help="use stochastic weight averaging")
+    parser.add_argument("--swa_update_per_epoch", default=3, type=int)
 
     args = parser.parse_args()
 
@@ -115,8 +120,9 @@ def seed_everything(seed):
 
 def wandb_setting(args):
     wandb.login()
-    run = wandb.init(entity=args.wandb_user, project=args.wandb_project)
-    run.name = f'v3_fold{args.val_fold}_minlr{args.min_lr}_maxlr{args.lr}_wd{args.weight_decay}_warmup{args.warmup_steps}_gradnorm{args.max_grad_norm}_biasdecay{args.decay_bias}_ls{args.label_smoothing}_wp{args.weights_pow}_data{args.dataset_version}_rce{args.rce_weight}'
+    wandb_run = wandb.init(entity=args.wandb_user, project=args.wandb_project)
+
+    return wandb_run
 
 
 if __name__ == "__main__":
@@ -129,9 +135,16 @@ if __name__ == "__main__":
     - arguments related to optimizer, scheduler, and loss function
       are not supported and directly assigned at the beginning of the code
     """
+    # configuration
+    seed_everything(42)
     args = get_config()
-    seed_everything(args.seed)
-    wandb_setting(args)
+
+    # wandb setting
+    wandb_run = wandb_setting(args)
+    wandb_run.name = f'debertav3_fold_lr{args.lr}_{args.wandb_comment}'
+
+    # log for configuration
+    print(args)
 
     class_names = ['None',
                    'Lead',
@@ -165,6 +178,7 @@ if __name__ == "__main__":
     model = get_model(args)
 
     # optimizer
+    args.optimizer = "adafactor"
     args.optimizer = "adamw"
     optimizer = get_optimizer(args, model)
 
@@ -173,11 +187,9 @@ if __name__ == "__main__":
     args.steps_per_epoch = len(train_dataloader)
     args.scheduler = "plateau"
     args.scheduler = "custom_warmup"
-    args.scheduler = "cosine"
+    args.scheduler = "cosine_annealing"
+    args.scheduler = 'cosine_annealing_warmup_restart'
     scheduler = get_scheduler(args, optimizer)
-
-    # swa
-    args.swa = True
 
     # train
     trainer = Trainer(args, model, train_dataloader, val_dataloader, scheduler, optimizer, criterion, class_names)
