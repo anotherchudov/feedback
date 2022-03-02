@@ -8,6 +8,10 @@ from transformers.optimization import Adafactor
 
 
 def get_optimizer(args, model):
+    # scale weight decay
+    # args.weight_decay = args.weight_decay * args.batch_size / (args.batch_size * args.grad_acc_steps)
+    # args.weight_decay /= args.grad_acc_steps
+
     if args.optimizer == 'sgd':
         optimizer = SGD(model.parameters(),
                         lr=args.lr,

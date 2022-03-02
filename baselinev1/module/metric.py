@@ -79,10 +79,13 @@ def process_sample(raw_ps, raw_gts, index_map, bounds, gt_spans, num_tokens, mat
                         o2 = overlap / (gspan[1] - gspan[0] + 1)
                         if min(o1, o2) >= .5:
                             all_overlaps[x1, x2] = max(o1, o2)
+
             unused_p_ix = set(range(len(pspans)))
             unused_g_ix = set(range(len(gspans)))
+
             col_size = len(pspans)
             row_size = len(gspans)
+
             for ix in np.argsort(all_overlaps.ravel())[::-1]:
                 if not len(unused_g_ix) or not len(unused_p_ix) or all_overlaps.ravel()[ix] == 0:
                     match_stats[cat_ix]['fp'] += len(unused_p_ix)

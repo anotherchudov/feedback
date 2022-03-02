@@ -28,7 +28,7 @@ class Trainer():
 
         # swa will run the scheduler so disable it
         self.run_scheduler = True
-        self.save_model = self.model
+        self.val_model = self.model
     
     def set_swa(self):
         """Setting for Stochastic Weighted Average
@@ -72,7 +72,7 @@ class Trainer():
         if (self.global_step + 1) > self.swa_start:
             if self.swa_step == 0:
                 self.swa_model.update_parameters(self.model)
-                self.save_model = self.swa_model.module
+                self.val_model = self.swa_model.module
                 # self.run_scheduler = False
             elif (self.swa_step + 1) % self.swa_save_per_steps == 0:
                 self.swa_model.update_parameters(self.model)
@@ -97,7 +97,8 @@ class Trainer():
         else:
             model_params = [p for p in self.model.parameters()]
         
-        scaler = GradScaler()
+        scaler = GradScaler(65536.0 / self.args.grad_acc_steps)
+        # scaler = GradScaler()
         pbar = tqdm(enumerate(self.train_loader), total=len(self.train_loader))
         for step, batch in pbar:
 
@@ -108,9 +109,9 @@ class Trainer():
             with autocast():
                 outs = self.model(tokens, mask)
                 loss = self.criterion(outs, label, class_weight=class_weight)
-                loss = loss / self.args.grad_acc_steps
+                # loss = self.criterion(outs, label, class_weight=class_weight) / self.args.grad_acc_steps
 
-            # loss backward
+            # loss
             scaler.scale(loss).backward()
             losses.append(loss.detach())
         
@@ -170,9 +171,10 @@ class Trainer():
                 tokens, mask, label, class_weight = (x.to(self.args.device) for x in (tokens, mask, labels, labels_mask))
 
                 with autocast():
-                    outs = self.save_model(tokens, mask)
+                    outs = self.val_model(tokens, mask)
                     loss = self.criterion(outs, label, class_weight=class_weight)
-                    losses.append(loss)
+
+                losses.append(loss)
 
                 match_updates = calc_acc(outs, label, class_weight)
                 val_matches += match_updates[0]
@@ -185,7 +187,6 @@ class Trainer():
 
         # validation Acc per class log
         valid_acc_per_class = val_matches / val_labels
-        valid_acc = valid_acc_per_class.mean().item()
         print(f'Valid Acc per class: {valid_acc_per_class}')
 
         for ix in range(1, 8):
@@ -220,8 +221,8 @@ class Trainer():
 
             if val_score > best_f1:
                 best_f1 = val_score
-                save_name = f"debertav3_fold{self.args.val_fold}.pth"
-                torch.save(self.save_model.state_dict(), osp.join(self.args.save_path, save_name))
+                save_name = f"debertav3_fold{self.args.val_fold}_f1{best_f1:.4f}.pth"
+                torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
                 print("save model .....")
 
             # scheduler
@@ -229,8 +230,8 @@ class Trainer():
                 self.scheduler.step(best_f1)
         
         # save before the training ends
-        save_name = f"debertav3_fold{self.args.val_fold}_f1{best_f1:.2f}.pth"
-        torch.save(self.save_model.state_dict(), osp.join(self.args.save_path, save_name))
+        save_name = f"debertav3_fold{self.args.val_fold}_f1{best_f1:.4f}.pth"
+        torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
         print("save model .....")
 
         return best_f1

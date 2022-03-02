@@ -46,7 +46,7 @@ def get_config():
     parser.add_argument("--grad_acc_steps", default=2, type=int)
     parser.add_argument("--grad_checkpt", default=True, type=bool)
     parser.add_argument("--data_prefix", default='', type=str)
-    parser.add_argument("--max_grad_norm", default=35 * 8, type=int)
+    parser.add_argument("--max_grad_norm", default=10.0, type=float)
     parser.add_argument("--start_eval_at", default=0, type=int)
     parser.add_argument("--weight_decay", default=1e-2, type=float)
     parser.add_argument("--weights_pow", default=0.1, type=float)
@@ -159,6 +159,11 @@ if __name__ == "__main__":
     if not osp.exists(args.save_path):
         os.makedirs(args.save_path)
 
+    # optimizing with 1 data doesn't work good here so opted out
+    # make trainloader batch_size to 1
+    # args.grad_acc_steps = args.batch_size
+    # args.max_grad_norm = 35 * args.batch_size
+
     # data
     all_texts, token_weights, data, csv, train_ids, val_ids, train_text_ids, val_text_ids = get_data_files(args)
     train_dataloader, val_dataloader = get_dataloader(args, train_ids, val_ids, data, csv, all_texts, val_text_ids, class_names, token_weights)
@@ -186,9 +191,9 @@ if __name__ == "__main__":
     # cosine - (one cycle learning) the learning rate will be decayed by a factor of 0.5 every 1 epochs
     args.steps_per_epoch = len(train_dataloader)
     args.scheduler = "plateau"
-    args.scheduler = "custom_warmup"
-    args.scheduler = "cosine_annealing"
-    args.scheduler = 'cosine_annealing_warmup_restart'
+    # args.scheduler = "custom_warmup"
+    # args.scheduler = "cosine_annealing"
+    # args.scheduler = 'cosine_annealing_warmup_restart'
     scheduler = get_scheduler(args, optimizer)
 
     # train
