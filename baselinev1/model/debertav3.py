@@ -8,8 +8,8 @@
 import torch
 from torch.nn import functional as F
 from torch.utils.checkpoint import checkpoint
-from ducky_transformers import DebertaV2Model
-
+# from ducky_transformers import DebertaV2Model
+from transformers import DebertaV2Model
 
 class DebertaV3Large(torch.nn.Module):
     """microsoft/deberta-v3-large"""
