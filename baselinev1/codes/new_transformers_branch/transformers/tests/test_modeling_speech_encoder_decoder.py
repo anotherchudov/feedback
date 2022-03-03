@@ -18,7 +18,7 @@ import tempfile
 import unittest
 
 from transformers import is_torch_available
-from transformers.testing_utils import require_torch, slow, torch_device
+from ducky_transformers.testing_utils import require_torch, slow, torch_device
 
 from .test_modeling_bert import BertModelTester
 from .test_modeling_common import floats_tensor, ids_tensor, random_attention_mask
@@ -38,8 +38,8 @@ if is_torch_available():
         SpeechEncoderDecoderModel,
         Wav2Vec2Model,
     )
-    from transformers.modeling_outputs import BaseModelOutput
-    from transformers.models.speech_to_text.modeling_speech_to_text import Speech2TextEncoder
+    from ducky_transformers.modeling_outputs import BaseModelOutput
+    from ducky_transformers.models.speech_to_text.modeling_speech_to_text import Speech2TextEncoder
 
 
 @require_torch

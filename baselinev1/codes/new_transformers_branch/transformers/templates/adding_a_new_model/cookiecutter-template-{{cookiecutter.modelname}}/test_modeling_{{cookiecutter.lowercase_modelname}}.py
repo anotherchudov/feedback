@@ -20,7 +20,7 @@ import unittest
 
 from tests.test_modeling_common import floats_tensor
 from transformers import is_torch_available
-from transformers.testing_utils import require_torch, slow, torch_device
+from ducky_transformers.testing_utils import require_torch, slow, torch_device
 
 from transformers import {{cookiecutter.camelcase_modelname}}Config
 from .test_configuration_common import ConfigTester
@@ -39,7 +39,7 @@ if is_torch_available():
         {{cookiecutter.camelcase_modelname}}ForTokenClassification,
         {{cookiecutter.camelcase_modelname}}Model,
     )
-    from transformers.models.{{cookiecutter.lowercase_modelname}}.modeling_{{cookiecutter.lowercase_modelname}} import (
+    from ducky_transformers.models.{{cookiecutter.lowercase_modelname}}.modeling_{{cookiecutter.lowercase_modelname}} import (
         {{cookiecutter.uppercase_modelname}}_PRETRAINED_MODEL_ARCHIVE_LIST,
     )
 
@@ -486,8 +486,8 @@ import tempfile
 import unittest
 
 from transformers import is_torch_available
-from transformers.file_utils import cached_property
-from transformers.testing_utils import require_sentencepiece, require_tokenizers, require_torch, slow, torch_device
+from ducky_transformers.file_utils import cached_property
+from ducky_transformers.testing_utils import require_sentencepiece, require_tokenizers, require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_generation_utils import GenerationTesterMixin
@@ -506,7 +506,7 @@ if is_torch_available():
         {{cookiecutter.camelcase_modelname}}Model,
         {{cookiecutter.camelcase_modelname}}Tokenizer,
     )
-    from transformers.models.{{cookiecutter.lowercase_modelname}}.modeling_{{cookiecutter.lowercase_modelname}} import (
+    from ducky_transformers.models.{{cookiecutter.lowercase_modelname}}.modeling_{{cookiecutter.lowercase_modelname}} import (
         {{cookiecutter.camelcase_modelname}}Decoder,
         {{cookiecutter.camelcase_modelname}}Encoder,
     )

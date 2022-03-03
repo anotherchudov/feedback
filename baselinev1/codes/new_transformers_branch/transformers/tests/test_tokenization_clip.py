@@ -19,8 +19,8 @@ import os
 import unittest
 
 from transformers import CLIPTokenizer, CLIPTokenizerFast
-from transformers.models.clip.tokenization_clip import VOCAB_FILES_NAMES
-from transformers.testing_utils import require_tokenizers
+from ducky_transformers.models.clip.tokenization_clip import VOCAB_FILES_NAMES
+from ducky_transformers.testing_utils import require_tokenizers
 
 from .test_tokenization_common import TokenizerTesterMixin
 

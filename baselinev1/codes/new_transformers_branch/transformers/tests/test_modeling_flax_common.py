@@ -25,8 +25,8 @@ import transformers
 from huggingface_hub import delete_repo, login
 from requests.exceptions import HTTPError
 from transformers import BertConfig, is_flax_available, is_torch_available
-from transformers.models.auto import get_values
-from transformers.testing_utils import PASS, USER, CaptureLogger, is_pt_flax_cross_test, is_staging_test, require_flax
+from ducky_transformers.models.auto import get_values
+from ducky_transformers.testing_utils import PASS, USER, CaptureLogger, is_pt_flax_cross_test, is_staging_test, require_flax
 from transformers.utils import logging
 
 
@@ -45,7 +45,7 @@ if is_flax_available():
         FlaxAutoModelForSequenceClassification,
         FlaxBertModel,
     )
-    from transformers.modeling_flax_pytorch_utils import (
+    from ducky_transformers.modeling_flax_pytorch_utils import (
         convert_pytorch_state_dict_to_flax,
         load_flax_weights_in_pytorch_model,
     )

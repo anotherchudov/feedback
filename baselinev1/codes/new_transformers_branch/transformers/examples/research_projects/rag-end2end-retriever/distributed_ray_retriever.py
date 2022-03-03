@@ -3,7 +3,7 @@ import random
 
 import ray
 from transformers import RagConfig, RagRetriever, RagTokenizer
-from transformers.models.rag.retrieval_rag import CustomHFIndex
+from ducky_transformers.models.rag.retrieval_rag import CustomHFIndex
 
 
 logger = logging.getLogger(__name__)

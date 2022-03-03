@@ -32,9 +32,9 @@ from copy import deepcopy  # noqa
 
 from parameterized import parameterized  # noqa
 from transformers import TrainingArguments, is_torch_available  # noqa
-from transformers.deepspeed import is_deepspeed_available  # noqa
-from transformers.file_utils import WEIGHTS_NAME  # noqa
-from transformers.testing_utils import (  # noqa
+from ducky_transformers.deepspeed import is_deepspeed_available  # noqa
+from ducky_transformers.file_utils import WEIGHTS_NAME  # noqa
+from ducky_transformers.testing_utils import (  # noqa
     CaptureLogger,
     ExtendSysPath,
     TestCasePlus,
@@ -46,7 +46,7 @@ from transformers.testing_utils import (  # noqa
     require_torch_multi_gpu,
     slow,
 )
-from transformers.trainer_utils import set_seed  # noqa
+from ducky_transformers.trainer_utils import set_seed  # noqa
 
 
 set_seed(42)

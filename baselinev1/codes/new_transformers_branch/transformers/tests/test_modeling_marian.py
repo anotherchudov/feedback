@@ -19,8 +19,8 @@ import unittest
 
 from huggingface_hub.hf_api import list_models
 from transformers import MarianConfig, is_torch_available
-from transformers.file_utils import cached_property
-from transformers.testing_utils import require_sentencepiece, require_tokenizers, require_torch, slow, torch_device
+from ducky_transformers.file_utils import cached_property
+from ducky_transformers.testing_utils import require_sentencepiece, require_tokenizers, require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_generation_utils import GenerationTesterMixin
@@ -38,12 +38,12 @@ if is_torch_available():
         MarianMTModel,
         TranslationPipeline,
     )
-    from transformers.models.marian.convert_marian_to_pytorch import (
+    from ducky_transformers.models.marian.convert_marian_to_pytorch import (
         ORG_NAME,
         convert_hf_name_to_opus_name,
         convert_opus_name_to_hf_name,
     )
-    from transformers.models.marian.modeling_marian import (
+    from ducky_transformers.models.marian.modeling_marian import (
         MarianDecoder,
         MarianEncoder,
         MarianForCausalLM,

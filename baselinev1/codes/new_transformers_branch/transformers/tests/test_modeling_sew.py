@@ -22,7 +22,7 @@ import pytest
 
 from tests.test_modeling_common import floats_tensor, ids_tensor, random_attention_mask
 from transformers import SEWConfig, is_torch_available
-from transformers.testing_utils import require_soundfile, require_torch, slow, torch_device
+from ducky_transformers.testing_utils import require_soundfile, require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_common import ModelTesterMixin, _config_zero_init
@@ -38,7 +38,7 @@ if is_torch_available():
         Wav2Vec2FeatureExtractor,
         Wav2Vec2Processor,
     )
-    from transformers.models.hubert.modeling_hubert import _compute_mask_indices
+    from ducky_transformers.models.hubert.modeling_hubert import _compute_mask_indices
 
 
 class SEWModelTester:

@@ -22,8 +22,8 @@ import unittest
 import timeout_decorator  # noqa
 
 from transformers import BartConfig, is_torch_available
-from transformers.file_utils import cached_property
-from transformers.testing_utils import require_sentencepiece, require_tokenizers, require_torch, slow, torch_device
+from ducky_transformers.file_utils import cached_property
+from ducky_transformers.testing_utils import require_sentencepiece, require_tokenizers, require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_generation_utils import GenerationTesterMixin
@@ -43,7 +43,7 @@ if is_torch_available():
         BartTokenizer,
         pipeline,
     )
-    from transformers.models.bart.modeling_bart import BartDecoder, BartEncoder, shift_tokens_right
+    from ducky_transformers.models.bart.modeling_bart import BartDecoder, BartEncoder, shift_tokens_right
 
 
 def prepare_bart_inputs_dict(

@@ -16,7 +16,7 @@
 import unittest
 
 from transformers import GPT2Config, is_tf_available
-from transformers.testing_utils import require_tf, slow
+from ducky_transformers.testing_utils import require_tf, slow
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_tf_common import TFModelTesterMixin, floats_tensor, ids_tensor
@@ -26,7 +26,7 @@ from .test_modeling_tf_core import TFCoreModelTesterMixin
 if is_tf_available():
     import tensorflow as tf
 
-    from transformers.models.gpt2.modeling_tf_gpt2 import (
+    from ducky_transformers.models.gpt2.modeling_tf_gpt2 import (
         TF_GPT2_PRETRAINED_MODEL_ARCHIVE_LIST,
         TFGPT2DoubleHeadsModel,
         TFGPT2ForSequenceClassification,

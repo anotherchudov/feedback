@@ -34,7 +34,7 @@ from transformers import (
     default_data_collator,
     set_seed,
 )
-from transformers.trainer_utils import is_main_process
+from ducky_transformers.trainer_utils import is_main_process
 from utils_hans import HansDataset, InputFeatures, hans_processors, hans_tasks_num_labels
 
 

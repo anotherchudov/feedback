@@ -21,7 +21,7 @@ from transformers import (
     ZeroShotClassificationPipeline,
     pipeline,
 )
-from transformers.testing_utils import is_pipeline_test, nested_simplify, require_tf, require_torch, slow
+from ducky_transformers.testing_utils import is_pipeline_test, nested_simplify, require_tf, require_torch, slow
 
 from .test_pipelines_common import ANY, PipelineTestCaseMeta
 

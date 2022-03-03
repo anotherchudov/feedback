@@ -17,7 +17,7 @@
 import unittest
 
 from transformers import RobertaConfig, is_tf_available
-from transformers.testing_utils import require_sentencepiece, require_tf, require_tokenizers, slow
+from ducky_transformers.testing_utils import require_sentencepiece, require_tf, require_tokenizers, slow
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_tf_common import TFModelTesterMixin, floats_tensor, ids_tensor
@@ -27,7 +27,7 @@ if is_tf_available():
     import numpy
     import tensorflow as tf
 
-    from transformers.models.roberta.modeling_tf_roberta import (
+    from ducky_transformers.models.roberta.modeling_tf_roberta import (
         TF_ROBERTA_PRETRAINED_MODEL_ARCHIVE_LIST,
         TFRobertaForCausalLM,
         TFRobertaForMaskedLM,

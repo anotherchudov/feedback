@@ -26,9 +26,9 @@ import numpy as np
 from datasets import load_dataset
 
 from transformers import PerceiverConfig
-from transformers.file_utils import is_torch_available, is_vision_available
-from transformers.models.auto import get_values
-from transformers.testing_utils import require_torch, require_torch_multi_gpu, require_vision, slow, torch_device
+from ducky_transformers.file_utils import is_torch_available, is_vision_available
+from ducky_transformers.models.auto import get_values
+from ducky_transformers.testing_utils import require_torch, require_torch_multi_gpu, require_vision, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask
@@ -54,7 +54,7 @@ if is_torch_available():
         PerceiverModel,
         PerceiverTokenizer,
     )
-    from transformers.models.perceiver.modeling_perceiver import PERCEIVER_PRETRAINED_MODEL_ARCHIVE_LIST
+    from ducky_transformers.models.perceiver.modeling_perceiver import PERCEIVER_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
 if is_vision_available():

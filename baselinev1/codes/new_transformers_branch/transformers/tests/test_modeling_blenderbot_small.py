@@ -18,8 +18,8 @@ import tempfile
 import unittest
 
 from transformers import BlenderbotSmallConfig, is_torch_available
-from transformers.file_utils import cached_property
-from transformers.testing_utils import require_torch, slow, torch_device
+from ducky_transformers.file_utils import cached_property
+from ducky_transformers.testing_utils import require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_generation_utils import GenerationTesterMixin
@@ -30,7 +30,7 @@ if is_torch_available():
     import torch
 
     from transformers import BlenderbotSmallForConditionalGeneration, BlenderbotSmallModel, BlenderbotSmallTokenizer
-    from transformers.models.blenderbot_small.modeling_blenderbot_small import (
+    from ducky_transformers.models.blenderbot_small.modeling_blenderbot_small import (
         BlenderbotSmallDecoder,
         BlenderbotSmallEncoder,
         BlenderbotSmallForCausalLM,

@@ -36,7 +36,7 @@ from transformers import (
     T5ForConditionalGeneration,
 )
 from transformers import logging as transformers_logging
-from transformers.integrations import is_ray_available
+from ducky_transformers.integrations import is_ray_available
 
 
 if is_ray_available():

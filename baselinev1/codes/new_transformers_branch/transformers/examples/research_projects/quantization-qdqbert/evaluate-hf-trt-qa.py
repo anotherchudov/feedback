@@ -32,7 +32,7 @@ import tensorrt as trt
 import transformers
 from accelerate import Accelerator
 from transformers import AutoTokenizer, EvalPrediction, default_data_collator, set_seed
-from transformers.trainer_pt_utils import nested_concat, nested_truncate
+from ducky_transformers.trainer_pt_utils import nested_concat, nested_truncate
 from utils_qa import postprocess_qa_predictions
 
 

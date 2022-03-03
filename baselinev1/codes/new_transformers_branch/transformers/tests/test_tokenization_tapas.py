@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 
 from transformers import AddedToken
-from transformers.models.tapas.tokenization_tapas import (
+from ducky_transformers.models.tapas.tokenization_tapas import (
     VOCAB_FILES_NAMES,
     BasicTokenizer,
     TapasTokenizer,
@@ -32,7 +32,7 @@ from transformers.models.tapas.tokenization_tapas import (
     _is_punctuation,
     _is_whitespace,
 )
-from transformers.testing_utils import (
+from ducky_transformers.testing_utils import (
     is_pt_tf_cross_test,
     require_pandas,
     require_scatter,

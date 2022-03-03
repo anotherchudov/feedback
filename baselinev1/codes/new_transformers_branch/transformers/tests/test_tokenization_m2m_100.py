@@ -19,12 +19,12 @@ from pathlib import Path
 from shutil import copyfile
 
 from transformers import M2M100Tokenizer, is_torch_available
-from transformers.file_utils import is_sentencepiece_available
-from transformers.testing_utils import nested_simplify, require_sentencepiece, require_tokenizers, require_torch, slow
+from ducky_transformers.file_utils import is_sentencepiece_available
+from ducky_transformers.testing_utils import nested_simplify, require_sentencepiece, require_tokenizers, require_torch, slow
 
 
 if is_sentencepiece_available():
-    from transformers.models.m2m_100.tokenization_m2m_100 import save_json, VOCAB_FILES_NAMES
+    from ducky_transformers.models.m2m_100.tokenization_m2m_100 import save_json, VOCAB_FILES_NAMES
 
 from .test_tokenization_common import TokenizerTesterMixin
 
@@ -34,7 +34,7 @@ if is_sentencepiece_available():
 
 
 if is_torch_available():
-    from transformers.models.m2m_100.modeling_m2m_100 import shift_tokens_right
+    from ducky_transformers.models.m2m_100.modeling_m2m_100 import shift_tokens_right
 
 EN_CODE = 128022
 FR_CODE = 128028

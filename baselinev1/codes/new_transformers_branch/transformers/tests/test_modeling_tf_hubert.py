@@ -23,7 +23,7 @@ import numpy as np
 import pytest
 
 from transformers import is_tf_available
-from transformers.testing_utils import require_soundfile, require_tf, slow
+from ducky_transformers.testing_utils import require_soundfile, require_tf, slow
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_tf_common import TFModelTesterMixin, ids_tensor
@@ -33,7 +33,7 @@ if is_tf_available():
     import tensorflow as tf
 
     from transformers import HubertConfig, TFHubertForCTC, TFHubertModel, Wav2Vec2Processor
-    from transformers.models.hubert.modeling_tf_hubert import _compute_mask_indices
+    from ducky_transformers.models.hubert.modeling_tf_hubert import _compute_mask_indices
 
 
 @require_tf

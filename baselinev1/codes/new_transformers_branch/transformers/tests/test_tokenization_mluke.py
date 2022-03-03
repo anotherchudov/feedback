@@ -18,8 +18,8 @@ import os
 import unittest
 from typing import Tuple
 
-from transformers.models.mluke.tokenization_mluke import MLukeTokenizer
-from transformers.testing_utils import require_torch, slow
+from ducky_transformers.models.mluke.tokenization_mluke import MLukeTokenizer
+from ducky_transformers.testing_utils import require_torch, slow
 
 from .test_tokenization_common import TokenizerTesterMixin
 

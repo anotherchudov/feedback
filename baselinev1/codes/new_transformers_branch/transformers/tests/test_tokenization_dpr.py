@@ -23,8 +23,8 @@ from transformers import (
     DPRReaderTokenizer,
     DPRReaderTokenizerFast,
 )
-from transformers.testing_utils import require_tokenizers, slow
-from transformers.tokenization_utils_base import BatchEncoding
+from ducky_transformers.testing_utils import require_tokenizers, slow
+from ducky_transformers.tokenization_utils_base import BatchEncoding
 
 from .test_tokenization_bert import BertTokenizationTest
 

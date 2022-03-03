@@ -19,8 +19,8 @@ import unittest
 
 from tests.test_modeling_common import floats_tensor
 from transformers import ConvBertConfig, is_torch_available
-from transformers.models.auto import get_values
-from transformers.testing_utils import require_torch, require_torch_gpu, slow, torch_device
+from ducky_transformers.models.auto import get_values
+from ducky_transformers.testing_utils import require_torch, require_torch_gpu, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_common import ModelTesterMixin, ids_tensor, random_attention_mask
@@ -38,7 +38,7 @@ if is_torch_available():
         ConvBertForTokenClassification,
         ConvBertModel,
     )
-    from transformers.models.convbert.modeling_convbert import CONVBERT_PRETRAINED_MODEL_ARCHIVE_LIST
+    from ducky_transformers.models.convbert.modeling_convbert import CONVBERT_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
 class ConvBertModelTester:

@@ -5,8 +5,8 @@ import sys
 from pathlib import Path
 
 import finetune_rag
-from transformers.file_utils import is_apex_available
-from transformers.testing_utils import (
+from ducky_transformers.file_utils import is_apex_available
+from ducky_transformers.testing_utils import (
     TestCasePlus,
     execute_subprocess_async,
     require_ray,

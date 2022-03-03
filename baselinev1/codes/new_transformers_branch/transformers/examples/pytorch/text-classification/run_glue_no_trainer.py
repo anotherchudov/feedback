@@ -40,8 +40,8 @@ from transformers import (
     get_scheduler,
     set_seed,
 )
-from transformers.file_utils import get_full_repo_name
-from transformers.utils.versions import require_version
+from ducky_transformers.file_utils import get_full_repo_name
+from ducky_transformers.utils.versions import require_version
 
 
 logger = logging.getLogger(__name__)

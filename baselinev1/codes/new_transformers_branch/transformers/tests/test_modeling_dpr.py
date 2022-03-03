@@ -18,7 +18,7 @@ import tempfile
 import unittest
 
 from transformers import DPRConfig, is_torch_available
-from transformers.testing_utils import require_torch, slow, torch_device
+from ducky_transformers.testing_utils import require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_common import ModelTesterMixin, ids_tensor, random_attention_mask
@@ -28,7 +28,7 @@ if is_torch_available():
     import torch
 
     from transformers import DPRContextEncoder, DPRQuestionEncoder, DPRReader, DPRReaderTokenizer
-    from transformers.models.dpr.modeling_dpr import (
+    from ducky_transformers.models.dpr.modeling_dpr import (
         DPR_CONTEXT_ENCODER_PRETRAINED_MODEL_ARCHIVE_LIST,
         DPR_QUESTION_ENCODER_PRETRAINED_MODEL_ARCHIVE_LIST,
         DPR_READER_PRETRAINED_MODEL_ARCHIVE_LIST,

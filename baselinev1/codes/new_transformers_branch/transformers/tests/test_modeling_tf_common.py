@@ -27,9 +27,9 @@ from typing import List, Tuple
 from huggingface_hub import delete_repo, login
 from requests.exceptions import HTTPError
 from transformers import is_tf_available
-from transformers.models.auto import get_values
-from transformers.testing_utils import tooslow  # noqa: F401
-from transformers.testing_utils import (
+from ducky_transformers.models.auto import get_values
+from ducky_transformers.testing_utils import tooslow  # noqa: F401
+from ducky_transformers.testing_utils import (
     PASS,
     USER,
     CaptureLogger,
@@ -65,7 +65,7 @@ if is_tf_available():
         TFSharedEmbeddings,
         tf_top_k_top_p_filtering,
     )
-    from transformers.generation_tf_utils import (
+    from ducky_transformers.generation_tf_utils import (
         TFBeamSampleDecoderOnlyOutput,
         TFBeamSampleEncoderDecoderOutput,
         TFBeamSearchDecoderOnlyOutput,

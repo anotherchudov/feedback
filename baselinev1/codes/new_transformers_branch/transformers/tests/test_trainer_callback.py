@@ -27,11 +27,11 @@ from transformers import (
     TrainingArguments,
     is_torch_available,
 )
-from transformers.testing_utils import require_torch
+from ducky_transformers.testing_utils import require_torch
 
 
 if is_torch_available():
-    from transformers.trainer import DEFAULT_CALLBACKS
+    from ducky_transformers.trainer import DEFAULT_CALLBACKS
 
     from .test_trainer import RegressionDataset, RegressionModelConfig, RegressionPreTrainedModel
 

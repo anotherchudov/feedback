@@ -21,9 +21,9 @@ import unittest
 from datasets import load_dataset
 
 from transformers import BeitConfig
-from transformers.file_utils import cached_property, is_torch_available, is_vision_available
-from transformers.models.auto import get_values
-from transformers.testing_utils import require_torch, require_vision, slow, torch_device
+from ducky_transformers.file_utils import cached_property, is_torch_available, is_vision_available
+from ducky_transformers.models.auto import get_values
+from ducky_transformers.testing_utils import require_torch, require_vision, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_common import ModelTesterMixin, _config_zero_init, floats_tensor, ids_tensor
@@ -40,7 +40,7 @@ if is_torch_available():
         BeitForSemanticSegmentation,
         BeitModel,
     )
-    from transformers.models.beit.modeling_beit import BEIT_PRETRAINED_MODEL_ARCHIVE_LIST, to_2tuple
+    from ducky_transformers.models.beit.modeling_beit import BEIT_PRETRAINED_MODEL_ARCHIVE_LIST, to_2tuple
 
 
 if is_vision_available():

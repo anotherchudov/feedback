@@ -17,7 +17,7 @@ import unittest
 from dataclasses import dataclass
 from typing import Optional
 
-from transformers.file_utils import ModelOutput
+from ducky_transformers.file_utils import ModelOutput
 
 
 @dataclass

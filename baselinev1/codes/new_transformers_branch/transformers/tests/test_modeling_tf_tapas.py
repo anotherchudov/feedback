@@ -33,9 +33,9 @@ from transformers import (
     TapasTokenizer,
     is_tf_available,
 )
-from transformers.file_utils import cached_property
-from transformers.models.auto import get_values
-from transformers.testing_utils import require_tensorflow_probability, require_tf, slow
+from ducky_transformers.file_utils import cached_property
+from ducky_transformers.models.auto import get_values
+from ducky_transformers.testing_utils import require_tensorflow_probability, require_tf, slow
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_tf_common import TFModelTesterMixin, ids_tensor
@@ -50,7 +50,7 @@ if is_tf_available():
         TFTapasForSequenceClassification,
         TFTapasModel,
     )
-    from transformers.models.tapas.modeling_tf_tapas import (
+    from ducky_transformers.models.tapas.modeling_tf_tapas import (
         IndexMap,
         ProductIndexMap,
         flatten,

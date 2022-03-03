@@ -14,8 +14,8 @@
 
 import sys
 
-from transformers.testing_utils import TestCasePlus
-from transformers.utils.versions import importlib_metadata, require_version, require_version_core
+from ducky_transformers.testing_utils import TestCasePlus
+from ducky_transformers.utils.versions import importlib_metadata, require_version, require_version_core
 
 
 numpy_ver = importlib_metadata.version("numpy")

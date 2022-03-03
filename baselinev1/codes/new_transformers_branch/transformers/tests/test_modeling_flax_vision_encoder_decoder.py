@@ -20,7 +20,7 @@ import unittest
 import numpy as np
 
 from transformers import is_flax_available, is_torch_available, is_vision_available
-from transformers.testing_utils import is_pt_flax_cross_test, require_flax, require_vision, slow, torch_device
+from ducky_transformers.testing_utils import is_pt_flax_cross_test, require_flax, require_vision, slow, torch_device
 
 from .test_modeling_flax_common import floats_tensor, ids_tensor
 from .test_modeling_flax_gpt2 import FlaxGPT2ModelTester
@@ -35,7 +35,7 @@ if is_flax_available():
         FlaxViTModel,
         VisionEncoderDecoderConfig,
     )
-    from transformers.modeling_flax_pytorch_utils import (
+    from ducky_transformers.modeling_flax_pytorch_utils import (
         convert_pytorch_state_dict_to_flax,
         load_flax_weights_in_pytorch_model,
     )

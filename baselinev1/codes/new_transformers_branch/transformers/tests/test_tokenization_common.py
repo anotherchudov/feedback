@@ -47,7 +47,7 @@ from transformers import (
     is_tokenizers_available,
     is_torch_available,
 )
-from transformers.testing_utils import (
+from ducky_transformers.testing_utils import (
     PASS,
     USER,
     get_tests_dir,
@@ -58,7 +58,7 @@ from transformers.testing_utils import (
     require_torch,
     slow,
 )
-from transformers.tokenization_utils import AddedToken, Trie
+from ducky_transformers.tokenization_utils import AddedToken, Trie
 
 
 if is_torch_available():

@@ -26,10 +26,10 @@ from transformers import (
     Speech2TextForConditionalGeneration,
     Wav2Vec2ForCTC,
 )
-from transformers.pipelines import AutomaticSpeechRecognitionPipeline, pipeline
+from ducky_transformers.pipelines import AutomaticSpeechRecognitionPipeline, pipeline
 from transformers.pipelines.audio_utils import chunk_bytes_iter
-from transformers.pipelines.automatic_speech_recognition import apply_stride, chunk_iter
-from transformers.testing_utils import (
+from ducky_transformers.pipelines.automatic_speech_recognition import apply_stride, chunk_iter
+from ducky_transformers.testing_utils import (
     is_pipeline_test,
     is_torch_available,
     nested_simplify,

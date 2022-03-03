@@ -26,7 +26,7 @@ from transformers import (
     is_apex_available,
     set_seed,
 )
-from transformers.trainer_utils import get_last_checkpoint, is_main_process
+from ducky_transformers.trainer_utils import get_last_checkpoint, is_main_process
 
 
 if is_apex_available():

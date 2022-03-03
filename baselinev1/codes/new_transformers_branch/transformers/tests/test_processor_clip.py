@@ -22,9 +22,9 @@ import numpy as np
 import pytest
 
 from transformers import CLIPTokenizer
-from transformers.file_utils import FEATURE_EXTRACTOR_NAME, is_vision_available
-from transformers.models.clip.tokenization_clip import VOCAB_FILES_NAMES
-from transformers.testing_utils import require_vision
+from ducky_transformers.file_utils import FEATURE_EXTRACTOR_NAME, is_vision_available
+from ducky_transformers.models.clip.tokenization_clip import VOCAB_FILES_NAMES
+from ducky_transformers.testing_utils import require_vision
 
 
 if is_vision_available():

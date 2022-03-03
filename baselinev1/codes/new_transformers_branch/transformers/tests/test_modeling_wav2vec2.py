@@ -22,7 +22,7 @@ from datasets import load_dataset
 
 from tests.test_modeling_common import floats_tensor, ids_tensor, random_attention_mask
 from transformers import Wav2Vec2Config, is_torch_available
-from transformers.testing_utils import (
+from ducky_transformers.testing_utils import (
     is_pt_flax_cross_test,
     is_pyctcdecode_available,
     is_torchaudio_available,
@@ -52,7 +52,7 @@ if is_torch_available():
         Wav2Vec2Model,
         Wav2Vec2Processor,
     )
-    from transformers.models.wav2vec2.modeling_wav2vec2 import (
+    from ducky_transformers.models.wav2vec2.modeling_wav2vec2 import (
         Wav2Vec2GumbelVectorQuantizer,
         _compute_mask_indices,
         _sample_negative_indices,

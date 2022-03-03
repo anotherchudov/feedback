@@ -38,9 +38,9 @@ from transformers import (
     Seq2SeqTrainingArguments,
     set_seed,
 )
-from transformers.trainer_utils import EvalLoopOutput, EvalPrediction, get_last_checkpoint
+from ducky_transformers.trainer_utils import EvalLoopOutput, EvalPrediction, get_last_checkpoint
 from transformers.utils import check_min_version
-from transformers.utils.versions import require_version
+from ducky_transformers.utils.versions import require_version
 
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.

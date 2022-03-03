@@ -16,7 +16,7 @@
 import os
 import unittest
 
-from transformers.models.bartpho.tokenization_bartpho import VOCAB_FILES_NAMES, BartphoTokenizer
+from ducky_transformers.models.bartpho.tokenization_bartpho import VOCAB_FILES_NAMES, BartphoTokenizer
 
 from .test_tokenization_common import TokenizerTesterMixin
 

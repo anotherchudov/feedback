@@ -20,8 +20,8 @@ import timeout_decorator  # noqa
 
 from parameterized import parameterized
 from transformers import FSMTConfig, is_torch_available
-from transformers.file_utils import cached_property
-from transformers.testing_utils import require_sentencepiece, require_tokenizers, require_torch, slow, torch_device
+from ducky_transformers.file_utils import cached_property
+from ducky_transformers.testing_utils import require_sentencepiece, require_tokenizers, require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_generation_utils import GenerationTesterMixin
@@ -33,13 +33,13 @@ if is_torch_available():
     from torch import nn
 
     from transformers import FSMTForConditionalGeneration, FSMTModel, FSMTTokenizer
-    from transformers.models.fsmt.modeling_fsmt import (
+    from ducky_transformers.models.fsmt.modeling_fsmt import (
         SinusoidalPositionalEmbedding,
         _prepare_fsmt_decoder_inputs,
         invert_mask,
         shift_tokens_right,
     )
-    from transformers.pipelines import TranslationPipeline
+    from ducky_transformers.pipelines import TranslationPipeline
 
 
 class FSMTModelTester:

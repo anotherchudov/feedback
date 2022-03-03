@@ -19,7 +19,7 @@ import tempfile
 import unittest
 
 from transformers import AutoFeatureExtractor, Wav2Vec2Config, Wav2Vec2FeatureExtractor
-from transformers.testing_utils import DUMMY_UNKNOWN_IDENTIFIER
+from ducky_transformers.testing_utils import DUMMY_UNKNOWN_IDENTIFIER
 
 
 SAMPLE_FEATURE_EXTRACTION_CONFIG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures")

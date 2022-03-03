@@ -18,7 +18,7 @@ import json
 import os
 import tempfile
 
-from transformers.file_utils import is_torch_available, is_vision_available
+from ducky_transformers.file_utils import is_torch_available, is_vision_available
 
 
 if is_torch_available():

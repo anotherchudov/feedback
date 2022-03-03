@@ -25,8 +25,8 @@ import numpy as np
 import requests
 import transformers
 from transformers import CLIPConfig, CLIPTextConfig, CLIPVisionConfig
-from transformers.file_utils import is_torch_available, is_vision_available
-from transformers.testing_utils import (
+from ducky_transformers.file_utils import is_torch_available, is_vision_available
+from ducky_transformers.testing_utils import (
     is_flax_available,
     is_pt_flax_cross_test,
     is_pt_tf_cross_test,
@@ -45,7 +45,7 @@ if is_torch_available():
     from torch import nn
 
     from transformers import CLIPModel, CLIPTextModel, CLIPVisionModel
-    from transformers.models.clip.modeling_clip import CLIP_PRETRAINED_MODEL_ARCHIVE_LIST
+    from ducky_transformers.models.clip.modeling_clip import CLIP_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
 if is_vision_available():
@@ -56,7 +56,7 @@ if is_vision_available():
 
 if is_flax_available():
     import jax.numpy as jnp
-    from transformers.modeling_flax_pytorch_utils import (
+    from ducky_transformers.modeling_flax_pytorch_utils import (
         convert_pytorch_state_dict_to_flax,
         load_flax_weights_in_pytorch_model,
     )

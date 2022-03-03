@@ -33,7 +33,7 @@ from transformers import (
 )
 from transformers import SquadDataTrainingArguments as DataTrainingArguments
 from transformers import Trainer, TrainingArguments
-from transformers.trainer_utils import is_main_process
+from ducky_transformers.trainer_utils import is_main_process
 
 
 logger = logging.getLogger(__name__)

@@ -19,7 +19,7 @@ import unittest
 
 from tests.test_modeling_common import floats_tensor
 from transformers import RoFormerConfig, is_torch_available
-from transformers.testing_utils import require_torch, slow, torch_device
+from ducky_transformers.testing_utils import require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_common import ModelTesterMixin, ids_tensor, random_attention_mask
@@ -37,7 +37,7 @@ if is_torch_available():
         RoFormerForTokenClassification,
         RoFormerModel,
     )
-    from transformers.models.roformer.modeling_roformer import (
+    from ducky_transformers.models.roformer.modeling_roformer import (
         ROFORMER_PRETRAINED_MODEL_ARCHIVE_LIST,
         RoFormerSelfAttention,
         RoFormerSinusoidalPositionalEmbedding,

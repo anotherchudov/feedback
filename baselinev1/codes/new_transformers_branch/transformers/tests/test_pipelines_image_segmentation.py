@@ -23,7 +23,7 @@ from transformers import (
     is_vision_available,
     pipeline,
 )
-from transformers.testing_utils import (
+from ducky_transformers.testing_utils import (
     is_pipeline_test,
     nested_simplify,
     require_tf,

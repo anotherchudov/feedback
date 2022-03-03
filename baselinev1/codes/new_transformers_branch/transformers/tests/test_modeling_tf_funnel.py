@@ -17,7 +17,7 @@
 import unittest
 
 from transformers import FunnelConfig, is_tf_available
-from transformers.testing_utils import require_tf
+from ducky_transformers.testing_utils import require_tf
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_tf_common import TFModelTesterMixin, ids_tensor

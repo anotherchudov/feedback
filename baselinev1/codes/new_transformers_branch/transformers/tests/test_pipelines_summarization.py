@@ -22,8 +22,8 @@ from transformers import (
     T5Config,
     pipeline,
 )
-from transformers.testing_utils import is_pipeline_test, require_tf, require_torch, slow, torch_device
-from transformers.tokenization_utils import TruncationStrategy
+from ducky_transformers.testing_utils import is_pipeline_test, require_tf, require_torch, slow, torch_device
+from ducky_transformers.tokenization_utils import TruncationStrategy
 
 from .test_pipelines_common import ANY, PipelineTestCaseMeta
 

@@ -22,7 +22,7 @@ from datasets import load_dataset
 
 from tests.test_modeling_common import floats_tensor, ids_tensor, random_attention_mask
 from transformers import WavLMConfig, is_torch_available
-from transformers.testing_utils import require_torch, require_torchaudio, slow, torch_device
+from ducky_transformers.testing_utils import require_torch, require_torchaudio, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_common import ModelTesterMixin, _config_zero_init

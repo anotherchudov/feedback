@@ -17,8 +17,8 @@
 import unittest
 
 from transformers import AlbertConfig, is_tf_available
-from transformers.models.auto import get_values
-from transformers.testing_utils import require_tf, slow
+from ducky_transformers.models.auto import get_values
+from ducky_transformers.testing_utils import require_tf, slow
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_tf_common import TFModelTesterMixin, ids_tensor
@@ -28,7 +28,7 @@ if is_tf_available():
     import tensorflow as tf
 
     from transformers import TF_MODEL_FOR_PRETRAINING_MAPPING
-    from transformers.models.albert.modeling_tf_albert import (
+    from ducky_transformers.models.albert.modeling_tf_albert import (
         TF_ALBERT_PRETRAINED_MODEL_ARCHIVE_LIST,
         TFAlbertForMaskedLM,
         TFAlbertForMultipleChoice,

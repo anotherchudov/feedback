@@ -22,7 +22,7 @@ import unittest
 import numpy as np
 
 from transformers import is_tf_available, is_torch_available, is_vision_available
-from transformers.testing_utils import (
+from ducky_transformers.testing_utils import (
     is_pt_tf_cross_test,
     require_tf,
     require_torch,
@@ -50,7 +50,7 @@ if is_tf_available():
         TFViTModel,
         VisionEncoderDecoderConfig,
     )
-    from transformers.modeling_tf_outputs import TFBaseModelOutput
+    from ducky_transformers.modeling_tf_outputs import TFBaseModelOutput
 
 if is_torch_available():
     import torch

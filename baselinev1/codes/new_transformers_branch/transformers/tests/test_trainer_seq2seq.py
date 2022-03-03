@@ -14,8 +14,8 @@
 # limitations under the License.
 
 from transformers import BertTokenizer, EncoderDecoderModel, Seq2SeqTrainer, Seq2SeqTrainingArguments
-from transformers.file_utils import is_datasets_available
-from transformers.testing_utils import TestCasePlus, require_torch, slow
+from ducky_transformers.file_utils import is_datasets_available
+from ducky_transformers.testing_utils import TestCasePlus, require_torch, slow
 
 
 if is_datasets_available():

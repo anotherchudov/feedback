@@ -18,7 +18,7 @@ import random
 import unittest
 
 from transformers import TransfoXLConfig, is_tf_available
-from transformers.testing_utils import require_tf, slow
+from ducky_transformers.testing_utils import require_tf, slow
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_tf_common import TFModelTesterMixin, ids_tensor

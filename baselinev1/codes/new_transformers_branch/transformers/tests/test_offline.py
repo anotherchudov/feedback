@@ -15,7 +15,7 @@
 import subprocess
 import sys
 
-from transformers.testing_utils import TestCasePlus, require_torch
+from ducky_transformers.testing_utils import TestCasePlus, require_torch
 
 
 class OfflineTests(TestCasePlus):

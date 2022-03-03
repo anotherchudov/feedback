@@ -44,10 +44,10 @@ from transformers import (
     Wav2Vec2Processor,
     set_seed,
 )
-from transformers.trainer_pt_utils import get_parameter_names
-from transformers.trainer_utils import get_last_checkpoint, is_main_process
+from ducky_transformers.trainer_pt_utils import get_parameter_names
+from ducky_transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
-from transformers.utils.versions import require_version
+from ducky_transformers.utils.versions import require_version
 
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.

@@ -54,7 +54,7 @@ from transformers import (
     create_optimizer,
     set_seed,
 )
-from transformers.utils.versions import require_version
+from ducky_transformers.utils.versions import require_version
 
 
 logger = logging.getLogger(__name__)

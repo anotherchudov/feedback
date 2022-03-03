@@ -18,7 +18,7 @@ import unittest
 from typing import Tuple
 
 from transformers import AddedToken, LukeTokenizer
-from transformers.testing_utils import require_torch, slow
+from ducky_transformers.testing_utils import require_torch, slow
 
 from .test_tokenization_common import TokenizerTesterMixin
 

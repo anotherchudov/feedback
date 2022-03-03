@@ -8,11 +8,11 @@ from unittest.mock import patch
 import numpy as np
 
 from transformers import BartTokenizer
-from transformers.file_utils import cached_property, is_datasets_available, is_faiss_available, is_tf_available
-from transformers.models.bert.tokenization_bert import VOCAB_FILES_NAMES as DPR_VOCAB_FILES_NAMES
-from transformers.models.dpr.tokenization_dpr import DPRQuestionEncoderTokenizer
-from transformers.models.roberta.tokenization_roberta import VOCAB_FILES_NAMES as BART_VOCAB_FILES_NAMES
-from transformers.testing_utils import require_sentencepiece, require_tf, require_tokenizers, slow
+from ducky_transformers.file_utils import cached_property, is_datasets_available, is_faiss_available, is_tf_available
+from ducky_transformers.models.bert.tokenization_bert import VOCAB_FILES_NAMES as DPR_VOCAB_FILES_NAMES
+from ducky_transformers.models.dpr.tokenization_dpr import DPRQuestionEncoderTokenizer
+from ducky_transformers.models.roberta.tokenization_roberta import VOCAB_FILES_NAMES as BART_VOCAB_FILES_NAMES
+from ducky_transformers.testing_utils import require_sentencepiece, require_tf, require_tokenizers, slow
 
 
 if is_tf_available() and is_datasets_available() and is_faiss_available():
@@ -32,7 +32,7 @@ if is_tf_available() and is_datasets_available() and is_faiss_available():
         TFRagTokenForGeneration,
     )
 
-    from transformers.modeling_tf_outputs import TFBaseModelOutput
+    from ducky_transformers.modeling_tf_outputs import TFBaseModelOutput
 
 from .test_modeling_tf_bart import TFBartModelTester
 from .test_modeling_tf_dpr import TFDPRModelTester

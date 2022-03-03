@@ -20,9 +20,9 @@ import tempfile
 import unittest
 
 from transformers import LEDConfig, is_torch_available
-from transformers.file_utils import cached_property
-from transformers.models.auto import get_values
-from transformers.testing_utils import require_sentencepiece, require_tokenizers, require_torch, slow, torch_device
+from ducky_transformers.file_utils import cached_property
+from ducky_transformers.models.auto import get_values
+from ducky_transformers.testing_utils import require_sentencepiece, require_tokenizers, require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_generation_utils import GenerationTesterMixin
@@ -40,7 +40,7 @@ if is_torch_available():
         LEDModel,
         LEDTokenizer,
     )
-    from transformers.models.led.modeling_led import LEDDecoder, LEDEncoder
+    from ducky_transformers.models.led.modeling_led import LEDDecoder, LEDEncoder
 
 
 def prepare_led_inputs_dict(

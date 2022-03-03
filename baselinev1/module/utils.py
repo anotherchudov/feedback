@@ -55,6 +55,9 @@ def get_data_files(args):
     id_to_ix_map = get_id_to_ix_map()
     data_splits = get_fold_data()
 
+    # replacing [ florida -> LOCATION NAME ] due to discrepency with text files
+    csv.loc[csv.discourse_id==1623258656795.0, 'discourse_text'] = csv.query('discourse_id == 1623258656795.0').discourse_text.str.replace('florida', 'LOCATION_NAME').values
+
     # text_id example `16585724607E`
     train_text_ids = [text_id for fold in range(5) if fold != args.val_fold for text_id in data_splits[args.seed][250]['normed'][fold]]
     val_text_ids = data_splits[args.seed][250]['normed'][args.val_fold]

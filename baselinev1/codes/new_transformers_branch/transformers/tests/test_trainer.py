@@ -38,8 +38,8 @@ from transformers import (
     is_torch_available,
     logging,
 )
-from transformers.file_utils import WEIGHTS_NAME, is_apex_available
-from transformers.testing_utils import (
+from ducky_transformers.file_utils import WEIGHTS_NAME, is_apex_available
+from ducky_transformers.testing_utils import (
     ENDPOINT_STAGING,
     PASS,
     USER,
@@ -63,9 +63,9 @@ from transformers.testing_utils import (
     require_wandb,
     slow,
 )
-from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
-from transformers.training_args import OptimizerNames
-from transformers.utils.hp_naming import TrialShortNamer
+from ducky_transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
+from ducky_transformers.training_args import OptimizerNames
+from ducky_transformers.utils.hp_naming import TrialShortNamer
 
 
 if is_torch_available():
@@ -73,7 +73,7 @@ if is_torch_available():
     from torch import nn
     from torch.utils.data import IterableDataset
 
-    import transformers.optimization
+    import ducky_transformers.optimization
     from transformers import (
         AutoModelForSequenceClassification,
         EarlyStoppingCallback,
@@ -86,7 +86,7 @@ if is_torch_available():
         Trainer,
         TrainerState,
     )
-    from transformers.modeling_utils import unwrap_model
+    from ducky_transformers.modeling_utils import unwrap_model
 
 
 PATH_SAMPLE_TEXT = f"{get_tests_dir()}/fixtures/sample_text.txt"
@@ -489,7 +489,7 @@ class TrainerIntegrationPrerunTest(TestCasePlus, TrainerIntegrationCommon):
     def test_adafactor_lr_none(self):
         # test the special case where lr=None, since Trainer can't not have lr_scheduler
 
-        from transformers.optimization import Adafactor, AdafactorSchedule
+        from ducky_transformers.optimization import Adafactor, AdafactorSchedule
 
         train_dataset = RegressionDataset()
         args = TrainingArguments("./regression")
@@ -1747,12 +1747,12 @@ if is_torch_available():
     optim_test_params = [
         (
             OptimizerNames.ADAMW_HF,
-            transformers.optimization.AdamW,
+            ducky_transformers.optimization.AdamW,
             default_adam_kwargs,
         ),
         (
             OptimizerNames.ADAMW_HF.value,
-            transformers.optimization.AdamW,
+            ducky_transformers.optimization.AdamW,
             default_adam_kwargs,
         ),
         (
@@ -1762,7 +1762,7 @@ if is_torch_available():
         ),
         (
             OptimizerNames.ADAFACTOR,
-            transformers.optimization.Adafactor,
+            ducky_transformers.optimization.Adafactor,
             {
                 "scale_parameter": False,
                 "relative_step": False,

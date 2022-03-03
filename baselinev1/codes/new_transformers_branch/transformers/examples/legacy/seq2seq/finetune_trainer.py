@@ -31,8 +31,8 @@ from transformers import (
     MBartTokenizerFast,
     set_seed,
 )
-from transformers.trainer_utils import EvaluationStrategy, is_main_process
-from transformers.training_args import ParallelMode
+from ducky_transformers.trainer_utils import EvaluationStrategy, is_main_process
+from ducky_transformers.training_args import ParallelMode
 from utils import (
     Seq2SeqDataCollator,
     Seq2SeqDataset,

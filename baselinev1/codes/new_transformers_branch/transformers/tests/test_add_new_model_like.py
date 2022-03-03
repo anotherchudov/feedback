@@ -36,7 +36,7 @@ from transformers.commands.add_new_model_like import (
     retrieve_model_classes,
     simplify_replacements,
 )
-from transformers.testing_utils import require_flax, require_tf, require_torch
+from ducky_transformers.testing_utils import require_flax, require_tf, require_torch
 
 
 BERT_MODEL_FILES = {

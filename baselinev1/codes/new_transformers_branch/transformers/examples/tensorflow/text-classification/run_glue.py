@@ -36,7 +36,7 @@ from transformers import (
     TFTrainingArguments,
     set_seed,
 )
-from transformers.trainer_utils import get_last_checkpoint, is_main_process
+from ducky_transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
 
 

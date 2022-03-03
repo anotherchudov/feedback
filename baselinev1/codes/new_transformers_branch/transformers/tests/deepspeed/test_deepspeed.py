@@ -21,9 +21,9 @@ from copy import deepcopy
 
 from parameterized import parameterized
 from transformers import AutoModel, TrainingArguments, is_torch_available, logging
-from transformers.deepspeed import HfDeepSpeedConfig, is_deepspeed_available
-from transformers.file_utils import WEIGHTS_NAME
-from transformers.testing_utils import (
+from ducky_transformers.deepspeed import HfDeepSpeedConfig, is_deepspeed_available
+from ducky_transformers.file_utils import WEIGHTS_NAME
+from ducky_transformers.testing_utils import (
     CaptureLogger,
     CaptureStd,
     CaptureStderr,
@@ -38,7 +38,7 @@ from transformers.testing_utils import (
     require_torch_multi_gpu,
     slow,
 )
-from transformers.trainer_utils import get_last_checkpoint, set_seed
+from ducky_transformers.trainer_utils import get_last_checkpoint, set_seed
 
 
 tests_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
@@ -106,7 +106,7 @@ def require_deepspeed_aio(test_case):
 if is_deepspeed_available():
     from deepspeed.utils import logger as deepspeed_logger  # noqa
     from deepspeed.utils.zero_to_fp32 import load_state_dict_from_zero_checkpoint
-    from transformers.deepspeed import deepspeed_config, is_deepspeed_zero3_enabled  # noqa
+    from ducky_transformers.deepspeed import deepspeed_config, is_deepspeed_zero3_enabled  # noqa
 
 
 def get_launcher(distributed=False):

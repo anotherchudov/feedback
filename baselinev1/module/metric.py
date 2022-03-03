@@ -12,6 +12,41 @@ import pandas as pd
 
 import torch
 
+def extract_entities(ps, n):
+    cat_ps = ps.argmax(-1).cpu().numpy()
+    all_entities = {}
+    current_cat = None
+    current_start = None
+    for ix in range(1, n - 1):
+        if cat_ps[ix] % 2 == 1:
+            if current_cat is not None:
+                if current_cat not in all_entities:
+                    all_entities[current_cat] = []
+                all_entities[current_cat].append((current_start, ix - 1))
+            current_cat = (cat_ps[ix] + 1) // 2
+            current_start = ix        
+        elif cat_ps[ix] == 0:
+            if current_cat is not None:
+                if current_cat not in all_entities:
+                    all_entities[current_cat] = []
+                all_entities[current_cat].append((current_start, ix - 1))
+            current_cat = None
+        elif current_cat is not None and cat_ps[ix] != current_cat * 2:
+            if current_cat not in all_entities:
+                all_entities[current_cat] = []
+            all_entities[current_cat].append((current_start, ix - 1))
+            current_cat = None
+
+    if current_cat is not None:
+        if current_cat not in all_entities:
+            all_entities[current_cat] = []
+        all_entities[current_cat].append((current_start, ix))
+    
+    for cat_ix, min_len in zip(range(1, 8), (2, 2, 5, 2, 4, 3, 2)):
+        if cat_ix in all_entities:
+            all_entities[cat_ix] = [x for x in all_entities[cat_ix] if x[1] - x[0] + 1 >= min_len]
+            
+    return all_entities
 
 def extract_entities(preds, n):
     cat_preds = preds.argmax(-1).cpu().numpy()
@@ -38,6 +73,7 @@ def extract_entities(preds, n):
         if current_cat not in all_entities:
             all_entities[current_cat] = []
         all_entities[current_cat].append((current_start, ix))
+
     return all_entities
 
 def map_span_to_word_indices(span, index_map, bounds):

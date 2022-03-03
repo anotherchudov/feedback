@@ -16,7 +16,7 @@ import sys
 from typing import Dict
 
 from transformers import EvalPrediction, HfArgumentParser, TrainingArguments, is_torch_available
-from transformers.testing_utils import (
+from ducky_transformers.testing_utils import (
     TestCasePlus,
     execute_subprocess_async,
     get_torch_dist_unique_port,

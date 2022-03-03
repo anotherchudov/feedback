@@ -44,7 +44,7 @@ from transformers import (
     default_data_collator,
     set_seed,
 )
-from transformers.trainer_utils import get_last_checkpoint
+from ducky_transformers.trainer_utils import get_last_checkpoint
 
 
 logger = logging.getLogger(__name__)

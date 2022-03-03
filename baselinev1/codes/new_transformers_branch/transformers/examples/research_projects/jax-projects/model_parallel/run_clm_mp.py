@@ -51,7 +51,7 @@ from transformers import (
     TrainingArguments,
     is_tensorboard_available,
 )
-from transformers.testing_utils import CaptureLogger
+from ducky_transformers.testing_utils import CaptureLogger
 
 
 logger = logging.getLogger(__name__)

@@ -35,8 +35,8 @@ from transformers import (
     TokenSpan,
     is_tokenizers_available,
 )
-from transformers.models.gpt2.tokenization_gpt2 import GPT2Tokenizer
-from transformers.testing_utils import CaptureStderr, require_flax, require_tf, require_tokenizers, require_torch, slow
+from ducky_transformers.models.gpt2.tokenization_gpt2 import GPT2Tokenizer
+from ducky_transformers.testing_utils import CaptureStderr, require_flax, require_tf, require_tokenizers, require_torch, slow
 
 
 if is_tokenizers_available():

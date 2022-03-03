@@ -43,7 +43,7 @@ from transformers import (
     glue_processors,
     set_seed,
 )
-from transformers.trainer_utils import is_main_process
+from ducky_transformers.trainer_utils import is_main_process
 
 
 logger = logging.getLogger(__name__)

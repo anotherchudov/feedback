@@ -21,8 +21,8 @@ import jax.numpy as jnp
 from configuration_hybrid_clip import HybridCLIPConfig
 from flax.core.frozen_dict import FrozenDict
 from transformers import FLAX_MODEL_MAPPING, FlaxCLIPVisionModel
-from transformers.modeling_flax_utils import FlaxPreTrainedModel
-from transformers.models.clip.modeling_flax_clip import FlaxCLIPOutput
+from ducky_transformers.modeling_flax_utils import FlaxPreTrainedModel
+from ducky_transformers.models.clip.modeling_flax_clip import FlaxCLIPOutput
 from transformers.utils import logging
 
 

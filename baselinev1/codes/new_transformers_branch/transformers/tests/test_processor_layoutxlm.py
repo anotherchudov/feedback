@@ -20,9 +20,9 @@ import unittest
 from typing import List
 
 from transformers import PreTrainedTokenizer, PreTrainedTokenizerBase, PreTrainedTokenizerFast
-from transformers.file_utils import FEATURE_EXTRACTOR_NAME, cached_property, is_pytesseract_available
-from transformers.models.layoutxlm import LayoutXLMTokenizer, LayoutXLMTokenizerFast
-from transformers.testing_utils import (
+from ducky_transformers.file_utils import FEATURE_EXTRACTOR_NAME, cached_property, is_pytesseract_available
+from ducky_transformers.models.layoutxlm import LayoutXLMTokenizer, LayoutXLMTokenizerFast
+from ducky_transformers.testing_utils import (
     require_pytesseract,
     require_sentencepiece,
     require_tokenizers,

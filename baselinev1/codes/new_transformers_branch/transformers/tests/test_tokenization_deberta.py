@@ -19,8 +19,8 @@ import os
 import unittest
 
 from transformers import DebertaTokenizer, DebertaTokenizerFast
-from transformers.models.deberta.tokenization_deberta import VOCAB_FILES_NAMES
-from transformers.testing_utils import slow
+from ducky_transformers.models.deberta.tokenization_deberta import VOCAB_FILES_NAMES
+from ducky_transformers.testing_utils import slow
 
 from .test_tokenization_common import TokenizerTesterMixin
 

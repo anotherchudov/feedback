@@ -17,7 +17,7 @@ import os
 import unittest
 
 from transformers import DebertaV2Tokenizer, DebertaV2TokenizerFast
-from transformers.testing_utils import require_sentencepiece, require_tokenizers, slow
+from ducky_transformers.testing_utils import require_sentencepiece, require_tokenizers, slow
 
 from .test_tokenization_common import TokenizerTesterMixin
 

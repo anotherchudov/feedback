@@ -19,7 +19,7 @@ and adapts it to the specificities of MaskedBert (`pruning_method`, `mask_init` 
 
 import logging
 
-from transformers.configuration_utils import PretrainedConfig
+from ducky_transformers.configuration_utils import PretrainedConfig
 
 
 logger = logging.getLogger(__name__)

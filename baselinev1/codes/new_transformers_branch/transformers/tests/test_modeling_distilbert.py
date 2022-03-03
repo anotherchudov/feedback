@@ -17,7 +17,7 @@ import tempfile
 import unittest
 
 from transformers import DistilBertConfig, is_torch_available
-from transformers.testing_utils import require_torch, require_torch_gpu, slow, torch_device
+from ducky_transformers.testing_utils import require_torch, require_torch_gpu, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_common import ModelTesterMixin, ids_tensor, random_attention_mask

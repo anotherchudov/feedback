@@ -18,7 +18,7 @@
 import unittest
 
 from transformers import is_flax_available, {{cookiecutter.camelcase_modelname}}Config
-from transformers.testing_utils import require_flax, slow
+from ducky_transformers.testing_utils import require_flax, slow
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_flax_common import FlaxModelTesterMixin, ids_tensor
@@ -343,7 +343,7 @@ from transformers import (
     {{cookiecutter.camelcase_modelname}}Config,
     {{cookiecutter.camelcase_modelname}}Tokenizer,
 )
-from transformers.testing_utils import require_sentencepiece, require_flax, require_tokenizers, slow
+from ducky_transformers.testing_utils import require_sentencepiece, require_flax, require_tokenizers, slow
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_flax_common import FlaxModelTesterMixin, ids_tensor

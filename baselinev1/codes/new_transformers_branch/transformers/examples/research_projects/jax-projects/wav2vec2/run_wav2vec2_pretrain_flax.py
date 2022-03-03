@@ -26,7 +26,7 @@ from transformers import (
     Wav2Vec2FeatureExtractor,
     is_tensorboard_available,
 )
-from transformers.models.wav2vec2.modeling_flax_wav2vec2 import _compute_mask_indices, _sample_negative_indices
+from ducky_transformers.models.wav2vec2.modeling_flax_wav2vec2 import _compute_mask_indices, _sample_negative_indices
 
 
 logger = logging.getLogger(__name__)

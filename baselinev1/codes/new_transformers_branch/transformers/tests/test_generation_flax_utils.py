@@ -18,7 +18,7 @@ import numpy as np
 
 import transformers
 from transformers import is_flax_available, is_torch_available
-from transformers.testing_utils import is_pt_flax_cross_test, require_flax
+from ducky_transformers.testing_utils import is_pt_flax_cross_test, require_flax
 
 
 if is_flax_available():
@@ -27,7 +27,7 @@ if is_flax_available():
     import jax
     import jax.numpy as jnp
     from jax import jit
-    from transformers.modeling_flax_pytorch_utils import load_flax_weights_in_pytorch_model
+    from ducky_transformers.modeling_flax_pytorch_utils import load_flax_weights_in_pytorch_model
 
     os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.12"  # assumed parallelism: 8
 

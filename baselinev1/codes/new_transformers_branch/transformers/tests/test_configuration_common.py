@@ -26,8 +26,8 @@ from pathlib import Path
 from huggingface_hub import Repository, delete_repo, login
 from requests.exceptions import HTTPError
 from transformers import AutoConfig, BertConfig, GPT2Config, is_torch_available
-from transformers.configuration_utils import PretrainedConfig
-from transformers.testing_utils import PASS, USER, is_staging_test
+from ducky_transformers.configuration_utils import PretrainedConfig
+from ducky_transformers.testing_utils import PASS, USER, is_staging_test
 
 
 sys.path.append(str(Path(__file__).parent.parent / "utils"))

@@ -33,9 +33,9 @@ from transformers import (
     TextClassificationPipeline,
     pipeline,
 )
-from transformers.pipelines import get_task
-from transformers.pipelines.base import _pad
-from transformers.testing_utils import is_pipeline_test, nested_simplify, require_tf, require_torch
+from ducky_transformers.pipelines import get_task
+from ducky_transformers.pipelines.base import _pad
+from ducky_transformers.testing_utils import is_pipeline_test, nested_simplify, require_tf, require_torch
 
 
 logger = logging.getLogger(__name__)

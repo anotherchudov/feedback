@@ -33,9 +33,9 @@ from transformers import (
     ViTMAEConfig,
     ViTMAEForPreTraining,
 )
-from transformers.trainer_utils import get_last_checkpoint
+from ducky_transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version
-from transformers.utils.versions import require_version
+from ducky_transformers.utils.versions import require_version
 
 
 """ Pre-training a 🤗 ViT model as an MAE (masked autoencoder), as proposed in https://arxiv.org/abs/2111.06377."""

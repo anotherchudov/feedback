@@ -17,8 +17,8 @@ import os
 import unittest
 
 from transformers import BertGenerationTokenizer
-from transformers.file_utils import cached_property
-from transformers.testing_utils import require_sentencepiece, require_torch, slow
+from ducky_transformers.file_utils import cached_property
+from ducky_transformers.testing_utils import require_sentencepiece, require_torch, slow
 
 from .test_tokenization_common import TokenizerTesterMixin
 

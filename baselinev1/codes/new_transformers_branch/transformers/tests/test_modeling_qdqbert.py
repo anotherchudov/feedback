@@ -20,7 +20,7 @@ import unittest
 
 from tests.test_modeling_common import floats_tensor
 from transformers import QDQBertConfig, is_torch_available
-from transformers.testing_utils import require_pytorch_quantization, require_torch, slow, torch_device
+from ducky_transformers.testing_utils import require_pytorch_quantization, require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_common import ModelTesterMixin, ids_tensor, random_attention_mask
@@ -39,7 +39,7 @@ if is_torch_available():
         QDQBertLMHeadModel,
         QDQBertModel,
     )
-    from transformers.models.qdqbert.modeling_qdqbert import QDQBERT_PRETRAINED_MODEL_ARCHIVE_LIST
+    from ducky_transformers.models.qdqbert.modeling_qdqbert import QDQBERT_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
 class QDQBertModelTester:

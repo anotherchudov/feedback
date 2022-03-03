@@ -18,7 +18,7 @@ import unittest
 from pathlib import Path
 
 from transformers import AutoConfig, is_tf_available
-from transformers.testing_utils import require_tf
+from ducky_transformers.testing_utils import require_tf
 
 
 if is_tf_available():

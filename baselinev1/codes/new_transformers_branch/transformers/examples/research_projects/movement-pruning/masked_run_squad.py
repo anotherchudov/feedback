@@ -40,12 +40,12 @@ from transformers import (
     get_linear_schedule_with_warmup,
     squad_convert_examples_to_features,
 )
-from transformers.data.metrics.squad_metrics import (
+from ducky_transformers.data.metrics.squad_metrics import (
     compute_predictions_log_probs,
     compute_predictions_logits,
     squad_evaluate,
 )
-from transformers.data.processors.squad import SquadResult, SquadV1Processor, SquadV2Processor
+from ducky_transformers.data.processors.squad import SquadResult, SquadV1Processor, SquadV2Processor
 
 
 try:

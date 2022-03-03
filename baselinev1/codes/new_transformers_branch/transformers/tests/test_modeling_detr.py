@@ -20,8 +20,8 @@ import math
 import unittest
 
 from transformers import DetrConfig, is_timm_available, is_vision_available
-from transformers.file_utils import cached_property
-from transformers.testing_utils import require_timm, require_vision, slow, torch_device
+from ducky_transformers.file_utils import cached_property
+from ducky_transformers.testing_utils import require_timm, require_vision, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_generation_utils import GenerationTesterMixin

@@ -17,7 +17,7 @@
 import unittest
 
 from transformers import DistilBertConfig, is_tf_available
-from transformers.testing_utils import require_tf, slow
+from ducky_transformers.testing_utils import require_tf, slow
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_tf_common import TFModelTesterMixin, ids_tensor
@@ -26,7 +26,7 @@ from .test_modeling_tf_common import TFModelTesterMixin, ids_tensor
 if is_tf_available():
     import tensorflow as tf
 
-    from transformers.models.distilbert.modeling_tf_distilbert import (
+    from ducky_transformers.models.distilbert.modeling_tf_distilbert import (
         TF_DISTILBERT_PRETRAINED_MODEL_ARCHIVE_LIST,
         TFDistilBertForMaskedLM,
         TFDistilBertForMultipleChoice,

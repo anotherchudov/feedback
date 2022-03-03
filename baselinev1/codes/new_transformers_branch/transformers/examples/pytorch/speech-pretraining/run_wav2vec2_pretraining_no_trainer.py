@@ -42,8 +42,8 @@ from transformers import (
     is_wandb_available,
     set_seed,
 )
-from transformers.file_utils import get_full_repo_name
-from transformers.models.wav2vec2.modeling_wav2vec2 import _compute_mask_indices, _sample_negative_indices
+from ducky_transformers.file_utils import get_full_repo_name
+from ducky_transformers.models.wav2vec2.modeling_wav2vec2 import _compute_mask_indices, _sample_negative_indices
 
 
 logger = logging.getLogger(__name__)

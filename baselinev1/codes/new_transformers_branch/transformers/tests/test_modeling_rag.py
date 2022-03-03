@@ -24,11 +24,11 @@ from unittest.mock import patch
 import numpy as np
 
 from transformers import BartTokenizer, T5Tokenizer
-from transformers.file_utils import cached_property, is_datasets_available, is_faiss_available, is_torch_available
-from transformers.models.bert.tokenization_bert import VOCAB_FILES_NAMES as DPR_VOCAB_FILES_NAMES
-from transformers.models.dpr.tokenization_dpr import DPRContextEncoderTokenizer, DPRQuestionEncoderTokenizer
-from transformers.models.roberta.tokenization_roberta import VOCAB_FILES_NAMES as BART_VOCAB_FILES_NAMES
-from transformers.testing_utils import (
+from ducky_transformers.file_utils import cached_property, is_datasets_available, is_faiss_available, is_torch_available
+from ducky_transformers.models.bert.tokenization_bert import VOCAB_FILES_NAMES as DPR_VOCAB_FILES_NAMES
+from ducky_transformers.models.dpr.tokenization_dpr import DPRContextEncoderTokenizer, DPRQuestionEncoderTokenizer
+from ducky_transformers.models.roberta.tokenization_roberta import VOCAB_FILES_NAMES as BART_VOCAB_FILES_NAMES
+from ducky_transformers.testing_utils import (
     require_sentencepiece,
     require_tokenizers,
     require_torch,
@@ -63,7 +63,7 @@ if is_torch_available() and is_datasets_available() and is_faiss_available():
         RagTokenForGeneration,
         RagTokenizer,
     )
-    from transformers.modeling_outputs import BaseModelOutput
+    from ducky_transformers.modeling_outputs import BaseModelOutput
 
 
 def _assert_tensors_equal(a, b, atol=1e-12, prefix=""):

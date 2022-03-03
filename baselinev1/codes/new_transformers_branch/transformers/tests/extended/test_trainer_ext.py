@@ -20,9 +20,9 @@ import unittest
 from unittest.mock import patch
 
 from parameterized import parameterized
-from transformers.file_utils import is_apex_available
-from transformers.integrations import is_fairscale_available
-from transformers.testing_utils import (
+from ducky_transformers.file_utils import is_apex_available
+from ducky_transformers.integrations import is_fairscale_available
+from ducky_transformers.testing_utils import (
     CaptureStderr,
     ExtendSysPath,
     TestCasePlus,
@@ -35,8 +35,8 @@ from transformers.testing_utils import (
     require_torch_non_multi_gpu,
     slow,
 )
-from transformers.trainer_callback import TrainerState
-from transformers.trainer_utils import set_seed
+from ducky_transformers.trainer_callback import TrainerState
+from ducky_transformers.trainer_utils import set_seed
 
 
 bindir = os.path.abspath(os.path.dirname(__file__))

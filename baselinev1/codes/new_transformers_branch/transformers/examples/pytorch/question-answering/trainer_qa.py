@@ -17,7 +17,7 @@ A subclass of `Trainer` specific to Question-Answering tasks
 """
 
 from transformers import Trainer, is_torch_tpu_available
-from transformers.trainer_utils import PredictionOutput
+from ducky_transformers.trainer_utils import PredictionOutput
 
 
 if is_torch_tpu_available():

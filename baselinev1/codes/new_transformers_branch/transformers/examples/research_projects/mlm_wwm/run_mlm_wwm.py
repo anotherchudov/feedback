@@ -44,7 +44,7 @@ from transformers import (
     TrainingArguments,
     set_seed,
 )
-from transformers.trainer_utils import get_last_checkpoint, is_main_process
+from ducky_transformers.trainer_utils import get_last_checkpoint, is_main_process
 
 
 logger = logging.getLogger(__name__)

@@ -30,7 +30,7 @@ from transformers import glue_compute_metrics as compute_metrics
 from transformers import glue_convert_examples_to_features as convert_examples_to_features
 from transformers import glue_output_modes as output_modes
 from transformers import glue_processors as processors
-from transformers.trainer_utils import is_main_process
+from ducky_transformers.trainer_utils import is_main_process
 
 
 try:

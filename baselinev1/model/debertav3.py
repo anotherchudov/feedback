@@ -1,13 +1,14 @@
 
 
 # system path for transformer
-import sys
-sys.path.insert(0, '../codes')
+# path should be relative to the main file
+# import sys
+# sys.path.insert(0, '/home/feedback/working/feedback_ducky/baselinev1/codes')
 
 import torch
 from torch.nn import functional as F
 from torch.utils.checkpoint import checkpoint
-from transformers import DebertaV2Model
+from ducky_transformers import DebertaV2Model
 
 
 class DebertaV3Large(torch.nn.Module):

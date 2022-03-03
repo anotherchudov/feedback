@@ -29,8 +29,8 @@ from transformers import (
     Wav2Vec2CTCTokenizer,
     Wav2Vec2Tokenizer,
 )
-from transformers.models.wav2vec2.tokenization_wav2vec2 import VOCAB_FILES_NAMES
-from transformers.testing_utils import require_torch, slow
+from ducky_transformers.models.wav2vec2.tokenization_wav2vec2 import VOCAB_FILES_NAMES
+from ducky_transformers.testing_utils import require_torch, slow
 
 from .test_tokenization_common import TokenizerTesterMixin
 

@@ -20,8 +20,8 @@ import tempfile
 from importlib import import_module
 
 from transformers import is_tf_available
-from transformers.models.auto import get_values
-from transformers.testing_utils import _tf_gpu_memory_limit, require_tf, slow
+from ducky_transformers.models.auto import get_values
+from ducky_transformers.testing_utils import _tf_gpu_memory_limit, require_tf, slow
 
 from .test_modeling_tf_common import ids_tensor
 

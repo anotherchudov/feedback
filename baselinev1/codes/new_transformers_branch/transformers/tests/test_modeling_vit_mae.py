@@ -23,8 +23,8 @@ import unittest
 import numpy as np
 
 from transformers import ViTMAEConfig
-from transformers.file_utils import cached_property, is_torch_available, is_vision_available
-from transformers.testing_utils import require_torch, require_vision, slow, torch_device
+from ducky_transformers.file_utils import cached_property, is_torch_available, is_vision_available
+from ducky_transformers.testing_utils import require_torch, require_vision, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
@@ -35,7 +35,7 @@ if is_torch_available():
     from torch import nn
 
     from transformers import ViTMAEForPreTraining, ViTMAEModel
-    from transformers.models.vit.modeling_vit import VIT_PRETRAINED_MODEL_ARCHIVE_LIST, to_2tuple
+    from ducky_transformers.models.vit.modeling_vit import VIT_PRETRAINED_MODEL_ARCHIVE_LIST, to_2tuple
 
 
 if is_vision_available():

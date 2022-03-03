@@ -6,7 +6,7 @@ from pathlib import Path
 
 import torch
 
-from transformers.testing_utils import TestCasePlus, execute_subprocess_async, require_torch_multi_gpu
+from ducky_transformers.testing_utils import TestCasePlus, execute_subprocess_async, require_torch_multi_gpu
 from utils import load_json
 
 

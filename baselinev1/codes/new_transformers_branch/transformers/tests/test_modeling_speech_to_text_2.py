@@ -17,7 +17,7 @@
 import unittest
 
 from transformers import Speech2Text2Config
-from transformers.testing_utils import is_torch_available, require_torch, torch_device
+from ducky_transformers.testing_utils import is_torch_available, require_torch, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_generation_utils import GenerationTesterMixin
@@ -27,7 +27,7 @@ from .test_modeling_common import ModelTesterMixin, ids_tensor
 if is_torch_available():
     import torch
 
-    from transformers.models.speech_to_text_2.modeling_speech_to_text_2 import (
+    from ducky_transformers.models.speech_to_text_2.modeling_speech_to_text_2 import (
         Speech2Text2Decoder,
         Speech2Text2ForCausalLM,
     )

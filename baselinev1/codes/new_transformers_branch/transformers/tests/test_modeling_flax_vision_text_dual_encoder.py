@@ -21,8 +21,8 @@ import unittest
 
 import numpy as np
 
-from transformers.file_utils import is_flax_available, is_torch_available, is_vision_available
-from transformers.testing_utils import (
+from ducky_transformers.file_utils import is_flax_available, is_torch_available, is_vision_available
+from ducky_transformers.testing_utils import (
     is_pt_flax_cross_test,
     require_flax,
     require_torch,
@@ -46,7 +46,7 @@ if is_flax_available():
         VisionTextDualEncoderConfig,
         VisionTextDualEncoderProcessor,
     )
-    from transformers.modeling_flax_pytorch_utils import (
+    from ducky_transformers.modeling_flax_pytorch_utils import (
         convert_pytorch_state_dict_to_flax,
         load_flax_weights_in_pytorch_model,
     )

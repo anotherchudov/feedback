@@ -40,9 +40,9 @@ from transformers import (  # Trainer,; TrainingArguments,
 )
 
 # Will import SageMaker Model parallelism specific Trainer
-from transformers.sagemaker import SageMakerTrainer as Trainer
-from transformers.sagemaker import SageMakerTrainingArguments as TrainingArguments
-from transformers.trainer_utils import get_last_checkpoint
+from ducky_transformers.sagemaker import SageMakerTrainer as Trainer
+from ducky_transformers.sagemaker import SageMakerTrainingArguments as TrainingArguments
+from ducky_transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version
 
 

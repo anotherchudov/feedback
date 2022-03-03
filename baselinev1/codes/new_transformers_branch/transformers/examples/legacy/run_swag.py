@@ -41,7 +41,7 @@ from transformers import (
     AutoTokenizer,
     get_linear_schedule_with_warmup,
 )
-from transformers.trainer_utils import is_main_process
+from ducky_transformers.trainer_utils import is_main_process
 
 
 try:

@@ -20,8 +20,8 @@ import tempfile
 import unittest
 
 from transformers import M2M100Config, is_torch_available
-from transformers.file_utils import cached_property
-from transformers.testing_utils import require_sentencepiece, require_tokenizers, require_torch, slow, torch_device
+from ducky_transformers.file_utils import cached_property
+from ducky_transformers.testing_utils import require_sentencepiece, require_tokenizers, require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_generation_utils import GenerationTesterMixin
@@ -32,7 +32,7 @@ if is_torch_available():
     import torch
 
     from transformers import M2M100ForConditionalGeneration, M2M100Model, M2M100Tokenizer
-    from transformers.models.m2m_100.modeling_m2m_100 import M2M100Decoder, M2M100Encoder
+    from ducky_transformers.models.m2m_100.modeling_m2m_100 import M2M100Decoder, M2M100Encoder
 
 
 def prepare_m2m_100_inputs_dict(

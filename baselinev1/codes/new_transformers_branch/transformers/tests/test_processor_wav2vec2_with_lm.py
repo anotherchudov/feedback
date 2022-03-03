@@ -22,17 +22,17 @@ from pathlib import Path
 
 import numpy as np
 
-from transformers.file_utils import FEATURE_EXTRACTOR_NAME, is_pyctcdecode_available
-from transformers.models.wav2vec2 import Wav2Vec2CTCTokenizer, Wav2Vec2FeatureExtractor
-from transformers.models.wav2vec2.tokenization_wav2vec2 import VOCAB_FILES_NAMES
-from transformers.testing_utils import require_pyctcdecode
+from ducky_transformers.file_utils import FEATURE_EXTRACTOR_NAME, is_pyctcdecode_available
+from ducky_transformers.models.wav2vec2 import Wav2Vec2CTCTokenizer, Wav2Vec2FeatureExtractor
+from ducky_transformers.models.wav2vec2.tokenization_wav2vec2 import VOCAB_FILES_NAMES
+from ducky_transformers.testing_utils import require_pyctcdecode
 
 from .test_feature_extraction_wav2vec2 import floats_list
 
 
 if is_pyctcdecode_available():
     from pyctcdecode import BeamSearchDecoderCTC
-    from transformers.models.wav2vec2_with_lm import Wav2Vec2ProcessorWithLM
+    from ducky_transformers.models.wav2vec2_with_lm import Wav2Vec2ProcessorWithLM
 
 
 @require_pyctcdecode

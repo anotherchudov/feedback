@@ -39,7 +39,7 @@ from transformers import (
     TFTrainingArguments,
     set_seed,
 )
-from transformers.file_utils import CONFIG_NAME, TF2_WEIGHTS_NAME
+from ducky_transformers.file_utils import CONFIG_NAME, TF2_WEIGHTS_NAME
 from transformers.utils import check_min_version
 from utils_qa import postprocess_qa_predictions
 

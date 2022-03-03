@@ -25,8 +25,8 @@ from unittest.mock import patch
 import torch
 
 from transformers import ViTMAEForPreTraining, Wav2Vec2ForPreTraining
-from transformers.file_utils import is_apex_available
-from transformers.testing_utils import CaptureLogger, TestCasePlus, get_gpu_count, slow, torch_device
+from ducky_transformers.file_utils import is_apex_available
+from ducky_transformers.testing_utils import CaptureLogger, TestCasePlus, get_gpu_count, slow, torch_device
 
 
 SRC_DIRS = [

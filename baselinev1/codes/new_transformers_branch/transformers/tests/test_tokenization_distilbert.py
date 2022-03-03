@@ -15,7 +15,7 @@
 
 
 from transformers import DistilBertTokenizer, DistilBertTokenizerFast
-from transformers.testing_utils import require_tokenizers, slow
+from ducky_transformers.testing_utils import require_tokenizers, slow
 
 from .test_tokenization_bert import BertTokenizationTest
 

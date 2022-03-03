@@ -17,8 +17,8 @@ import tempfile
 import unittest
 
 from transformers import BertConfig, is_torch_available
-from transformers.models.auto import get_values
-from transformers.testing_utils import require_torch, require_torch_gpu, slow, torch_device
+from ducky_transformers.models.auto import get_values
+from ducky_transformers.testing_utils import require_torch, require_torch_gpu, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_generation_utils import GenerationTesterMixin
@@ -40,7 +40,7 @@ if is_torch_available():
         BertLMHeadModel,
         BertModel,
     )
-    from transformers.models.bert.modeling_bert import BERT_PRETRAINED_MODEL_ARCHIVE_LIST
+    from ducky_transformers.models.bert.modeling_bert import BERT_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
 class BertModelTester:

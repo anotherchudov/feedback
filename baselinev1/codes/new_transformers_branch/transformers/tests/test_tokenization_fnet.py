@@ -17,8 +17,8 @@ import os
 import unittest
 
 from transformers import FNetTokenizer, FNetTokenizerFast
-from transformers.testing_utils import require_sentencepiece, require_tokenizers, slow, tooslow
-from transformers.tokenization_utils import AddedToken
+from ducky_transformers.testing_utils import require_sentencepiece, require_tokenizers, slow, tooslow
+from ducky_transformers.tokenization_utils import AddedToken
 
 from .test_tokenization_common import TokenizerTesterMixin
 

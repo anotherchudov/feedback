@@ -8,7 +8,7 @@ import fire
 import torch
 
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-from transformers.utils.logging import get_logger
+from ducky_transformers.utils.logging import get_logger
 
 
 logger = get_logger(__name__)

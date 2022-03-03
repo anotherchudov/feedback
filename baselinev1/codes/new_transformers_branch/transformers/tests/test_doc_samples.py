@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import List, Union
 
 import transformers
-from transformers.testing_utils import require_tf, require_torch, slow
+from ducky_transformers.testing_utils import require_tf, require_torch, slow
 
 
 logger = logging.getLogger()

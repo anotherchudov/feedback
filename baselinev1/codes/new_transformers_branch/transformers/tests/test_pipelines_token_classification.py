@@ -24,8 +24,8 @@ from transformers import (
     TokenClassificationPipeline,
     pipeline,
 )
-from transformers.pipelines import AggregationStrategy, TokenClassificationArgumentHandler
-from transformers.testing_utils import (
+from ducky_transformers.pipelines import AggregationStrategy, TokenClassificationArgumentHandler
+from ducky_transformers.testing_utils import (
     is_pipeline_test,
     nested_simplify,
     require_tf,

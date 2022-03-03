@@ -1,6 +1,6 @@
 import copy
 
-from transformers.configuration_utils import PretrainedConfig
+from ducky_transformers.configuration_utils import PretrainedConfig
 from transformers.utils import logging
 
 

@@ -20,8 +20,8 @@ import unittest
 from shutil import copyfile
 
 from transformers import AutoProcessor, AutoTokenizer, Wav2Vec2Config, Wav2Vec2FeatureExtractor, Wav2Vec2Processor
-from transformers.file_utils import FEATURE_EXTRACTOR_NAME
-from transformers.tokenization_utils import TOKENIZER_CONFIG_FILE
+from ducky_transformers.file_utils import FEATURE_EXTRACTOR_NAME
+from ducky_transformers.tokenization_utils import TOKENIZER_CONFIG_FILE
 
 
 SAMPLE_PROCESSOR_CONFIG = os.path.join(

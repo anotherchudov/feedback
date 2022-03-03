@@ -1,7 +1,7 @@
 from collections import Counter
 import datasets
 import transformers
-from transformers.convert_slow_tokenizer import SLOW_TO_FAST_CONVERTERS
+from ducky_transformers.convert_slow_tokenizer import SLOW_TO_FAST_CONVERTERS
 
 from transformers.utils import logging
 

@@ -21,7 +21,7 @@ import unittest
 import numpy as np
 
 from transformers import is_tf_available, is_torch_available
-from transformers.testing_utils import is_pt_tf_cross_test, require_tf, require_torch, slow, torch_device
+from ducky_transformers.testing_utils import is_pt_tf_cross_test, require_tf, require_torch, slow, torch_device
 
 from .test_modeling_tf_bert import TFBertModelTester
 from .test_modeling_tf_common import ids_tensor
@@ -48,7 +48,7 @@ if is_tf_available():
         TFRobertaForCausalLM,
         TFRobertaModel,
     )
-    from transformers.modeling_tf_outputs import TFBaseModelOutput
+    from ducky_transformers.modeling_tf_outputs import TFBaseModelOutput
 
 if is_torch_available():
     import torch

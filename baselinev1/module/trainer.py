@@ -97,8 +97,8 @@ class Trainer():
         else:
             model_params = [p for p in self.model.parameters()]
         
-        scaler = GradScaler(65536.0 / self.args.grad_acc_steps)
-        # scaler = GradScaler()
+        # scaler = GradScaler(65536.0 / self.args.grad_acc_steps)
+        scaler = GradScaler()
         pbar = tqdm(enumerate(self.train_loader), total=len(self.train_loader))
         for step, batch in pbar:
 
@@ -108,8 +108,8 @@ class Trainer():
             tokens, mask, label, class_weight = (x.to(self.args.device) for x in batch)
             with autocast():
                 outs = self.model(tokens, mask)
-                loss = self.criterion(outs, label, class_weight=class_weight)
-                # loss = self.criterion(outs, label, class_weight=class_weight) / self.args.grad_acc_steps
+                # loss = self.criterion(outs, label, class_weight=class_weight)
+                loss = self.criterion(outs, label, class_weight=class_weight) / self.args.grad_acc_steps
 
             # loss
             scaler.scale(loss).backward()
@@ -222,8 +222,9 @@ class Trainer():
             if val_score > best_f1:
                 best_f1 = val_score
                 save_name = f"debertav3_fold{self.args.val_fold}_f1{best_f1:.4f}.pth"
-                torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
-                print("save model .....")
+                if best_f1 > 0.683:
+                    torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
+                    print("save model .....")
 
             # scheduler
             if self.run_scheduler and self.args.scheduler == 'plateau':
@@ -231,8 +232,9 @@ class Trainer():
         
         # save before the training ends
         save_name = f"debertav3_fold{self.args.val_fold}_f1{best_f1:.4f}.pth"
-        torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
-        print("save model .....")
+        if best_f1 > 0.683:
+            torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
+            print("save model .....")
 
         return best_f1
 

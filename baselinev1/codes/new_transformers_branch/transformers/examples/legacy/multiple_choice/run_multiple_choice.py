@@ -35,7 +35,7 @@ from transformers import (
     TrainingArguments,
     set_seed,
 )
-from transformers.trainer_utils import is_main_process
+from ducky_transformers.trainer_utils import is_main_process
 from utils_multiple_choice import MultipleChoiceDataset, Split, processors
 
 

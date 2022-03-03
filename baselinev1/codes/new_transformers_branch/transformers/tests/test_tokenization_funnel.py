@@ -18,8 +18,8 @@ import os
 import unittest
 
 from transformers import FunnelTokenizer, FunnelTokenizerFast
-from transformers.models.funnel.tokenization_funnel import VOCAB_FILES_NAMES
-from transformers.testing_utils import require_tokenizers
+from ducky_transformers.models.funnel.tokenization_funnel import VOCAB_FILES_NAMES
+from ducky_transformers.testing_utils import require_tokenizers
 
 from .test_tokenization_common import TokenizerTesterMixin
 

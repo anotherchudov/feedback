@@ -20,7 +20,7 @@ import tempfile
 import unittest
 
 from transformers import BigBirdPegasusConfig, is_torch_available
-from transformers.testing_utils import require_sentencepiece, require_tokenizers, require_torch, slow, torch_device
+from ducky_transformers.testing_utils import require_sentencepiece, require_tokenizers, require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_generation_utils import GenerationTesterMixin
@@ -38,7 +38,7 @@ if is_torch_available():
         BigBirdPegasusModel,
         PegasusTokenizer,
     )
-    from transformers.models.bigbird_pegasus.modeling_bigbird_pegasus import (
+    from ducky_transformers.models.bigbird_pegasus.modeling_bigbird_pegasus import (
         BigBirdPegasusDecoder,
         BigBirdPegasusEncoder,
     )

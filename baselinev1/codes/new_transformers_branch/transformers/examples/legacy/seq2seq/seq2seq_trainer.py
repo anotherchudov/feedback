@@ -19,10 +19,10 @@ from torch import nn
 from torch.utils.data import DistributedSampler, RandomSampler
 
 from transformers import PreTrainedModel, Trainer, logging
-from transformers.file_utils import is_torch_tpu_available
-from transformers.integrations import is_fairscale_available
-from transformers.models.fsmt.configuration_fsmt import FSMTConfig
-from transformers.optimization import (
+from ducky_transformers.file_utils import is_torch_tpu_available
+from ducky_transformers.integrations import is_fairscale_available
+from ducky_transformers.models.fsmt.configuration_fsmt import FSMTConfig
+from ducky_transformers.optimization import (
     Adafactor,
     AdamW,
     get_constant_schedule,
@@ -32,8 +32,8 @@ from transformers.optimization import (
     get_linear_schedule_with_warmup,
     get_polynomial_decay_schedule_with_warmup,
 )
-from transformers.trainer_pt_utils import get_tpu_sampler
-from transformers.training_args import ParallelMode
+from ducky_transformers.trainer_pt_utils import get_tpu_sampler
+from ducky_transformers.training_args import ParallelMode
 
 
 if is_fairscale_available():

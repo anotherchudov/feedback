@@ -18,7 +18,7 @@ from transformers import (
     set_seed,
     utils,
 )
-from transformers.trainer_utils import get_last_checkpoint, is_main_process
+from ducky_transformers.trainer_utils import get_last_checkpoint, is_main_process
 
 
 DESCRIPTION = """

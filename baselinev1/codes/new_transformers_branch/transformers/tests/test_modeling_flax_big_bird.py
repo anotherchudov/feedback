@@ -17,14 +17,14 @@ import unittest
 import numpy as np
 
 from transformers import BigBirdConfig, is_flax_available
-from transformers.testing_utils import require_flax, slow
+from ducky_transformers.testing_utils import require_flax, slow
 
 from .test_modeling_flax_common import FlaxModelTesterMixin, ids_tensor, random_attention_mask
 
 
 if is_flax_available():
     import jax
-    from transformers.models.big_bird.modeling_flax_big_bird import (
+    from ducky_transformers.models.big_bird.modeling_flax_big_bird import (
         FlaxBigBirdForMaskedLM,
         FlaxBigBirdForMultipleChoice,
         FlaxBigBirdForPreTraining,

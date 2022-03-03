@@ -21,7 +21,7 @@ import tempfile
 import unittest
 
 from transformers import AutoTokenizer, PreTrainedTokenizerFast
-from transformers.testing_utils import require_tokenizers
+from ducky_transformers.testing_utils import require_tokenizers
 
 from .test_tokenization_common import TokenizerTesterMixin
 

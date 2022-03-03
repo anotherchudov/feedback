@@ -21,8 +21,8 @@ import tempfile
 import unittest
 
 from transformers import ViTConfig
-from transformers.file_utils import cached_property, is_tf_available, is_vision_available
-from transformers.testing_utils import require_tf, require_vision, slow, tooslow
+from ducky_transformers.file_utils import cached_property, is_tf_available, is_vision_available
+from ducky_transformers.testing_utils import require_tf, require_vision, slow, tooslow
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_tf_common import TFModelTesterMixin, floats_tensor, ids_tensor
@@ -32,7 +32,7 @@ if is_tf_available():
     import tensorflow as tf
 
     from transformers import TFViTForImageClassification, TFViTModel
-    from transformers.models.vit.modeling_tf_vit import to_2tuple
+    from ducky_transformers.models.vit.modeling_tf_vit import to_2tuple
 
 
 if is_vision_available():

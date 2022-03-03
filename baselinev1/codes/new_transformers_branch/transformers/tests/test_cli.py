@@ -16,17 +16,17 @@
 import unittest
 from unittest.mock import patch
 
-from transformers.testing_utils import CaptureStd
+from ducky_transformers.testing_utils import CaptureStd
 
 
 class CLITest(unittest.TestCase):
     @patch("sys.argv", ["fakeprogrampath", "env"])
     def test_cli_env(self):
         # test transformers-cli env
-        import transformers.commands.transformers_cli
+        import ducky_transformers.commands.transformers_cli
 
         with CaptureStd() as cs:
-            transformers.commands.transformers_cli.main()
+            ducky_transformers.commands.transformers_cli.main()
         self.assertIn("Python version", cs.out)
         self.assertIn("Platform", cs.out)
         self.assertIn("Using distributed or parallel set-up in script?", cs.out)

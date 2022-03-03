@@ -17,8 +17,8 @@
 import unittest
 
 from transformers import ElectraConfig, is_torch_available
-from transformers.models.auto import get_values
-from transformers.testing_utils import require_torch, slow, torch_device
+from ducky_transformers.models.auto import get_values
+from ducky_transformers.testing_utils import require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask
@@ -38,7 +38,7 @@ if is_torch_available():
         ElectraForTokenClassification,
         ElectraModel,
     )
-    from transformers.models.electra.modeling_electra import ELECTRA_PRETRAINED_MODEL_ARCHIVE_LIST
+    from ducky_transformers.models.electra.modeling_electra import ELECTRA_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
 class ElectraModelTester:

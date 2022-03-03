@@ -16,7 +16,7 @@
 import unittest
 
 from transformers import LukeConfig, is_torch_available
-from transformers.testing_utils import require_torch, slow, torch_device
+from ducky_transformers.testing_utils import require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_common import ModelTesterMixin, ids_tensor, random_attention_mask
@@ -33,7 +33,7 @@ if is_torch_available():
         LukeModel,
         LukeTokenizer,
     )
-    from transformers.models.luke.modeling_luke import LUKE_PRETRAINED_MODEL_ARCHIVE_LIST
+    from ducky_transformers.models.luke.modeling_luke import LUKE_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
 class LukeModelTester:

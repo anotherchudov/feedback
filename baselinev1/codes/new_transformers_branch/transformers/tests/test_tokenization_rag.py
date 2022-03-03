@@ -19,17 +19,17 @@ import tempfile
 from unittest import TestCase
 
 from transformers import BartTokenizer, BartTokenizerFast, DPRQuestionEncoderTokenizer, DPRQuestionEncoderTokenizerFast
-from transformers.file_utils import is_datasets_available, is_faiss_available, is_torch_available
-from transformers.models.bart.configuration_bart import BartConfig
-from transformers.models.bert.tokenization_bert import VOCAB_FILES_NAMES as DPR_VOCAB_FILES_NAMES
-from transformers.models.dpr.configuration_dpr import DPRConfig
-from transformers.models.roberta.tokenization_roberta import VOCAB_FILES_NAMES as BART_VOCAB_FILES_NAMES
-from transformers.testing_utils import require_faiss, require_tokenizers, require_torch, slow
+from ducky_transformers.file_utils import is_datasets_available, is_faiss_available, is_torch_available
+from ducky_transformers.models.bart.configuration_bart import BartConfig
+from ducky_transformers.models.bert.tokenization_bert import VOCAB_FILES_NAMES as DPR_VOCAB_FILES_NAMES
+from ducky_transformers.models.dpr.configuration_dpr import DPRConfig
+from ducky_transformers.models.roberta.tokenization_roberta import VOCAB_FILES_NAMES as BART_VOCAB_FILES_NAMES
+from ducky_transformers.testing_utils import require_faiss, require_tokenizers, require_torch, slow
 
 
 if is_torch_available() and is_datasets_available() and is_faiss_available():
-    from transformers.models.rag.configuration_rag import RagConfig
-    from transformers.models.rag.tokenization_rag import RagTokenizer
+    from ducky_transformers.models.rag.configuration_rag import RagConfig
+    from ducky_transformers.models.rag.tokenization_rag import RagTokenizer
 
 
 @require_faiss

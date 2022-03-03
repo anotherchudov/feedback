@@ -40,9 +40,9 @@ from transformers import (
     is_torch_available,
     logging,
 )
-from transformers.file_utils import WEIGHTS_NAME, is_flax_available, is_torch_fx_available
-from transformers.models.auto import get_values
-from transformers.testing_utils import (
+from ducky_transformers.file_utils import WEIGHTS_NAME, is_flax_available, is_torch_fx_available
+from ducky_transformers.models.auto import get_values
+from ducky_transformers.testing_utils import (
     PASS,
     USER,
     CaptureLogger,
@@ -90,13 +90,13 @@ if is_torch_available():
 
 if is_flax_available():
     import jax.numpy as jnp
-    from transformers.modeling_flax_pytorch_utils import (
+    from ducky_transformers.modeling_flax_pytorch_utils import (
         convert_pytorch_state_dict_to_flax,
         load_flax_weights_in_pytorch_model,
     )
 
 if is_torch_fx_available():
-    from transformers.utils.fx import symbolic_trace
+    from ducky_transformers.utils.fx import symbolic_trace
 
 
 def _config_zero_init(config):

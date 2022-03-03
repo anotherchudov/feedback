@@ -23,8 +23,8 @@ import numpy as np
 
 import transformers
 from transformers import LxmertConfig, is_tf_available, is_torch_available
-from transformers.models.auto import get_values
-from transformers.testing_utils import is_pt_tf_cross_test, require_torch, slow, torch_device
+from ducky_transformers.models.auto import get_values
+from ducky_transformers.testing_utils import is_pt_tf_cross_test, require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_modeling_common import ModelTesterMixin, ids_tensor
@@ -40,7 +40,7 @@ if is_torch_available():
         LxmertForQuestionAnswering,
         LxmertModel,
     )
-    from transformers.models.lxmert.modeling_lxmert import LXMERT_PRETRAINED_MODEL_ARCHIVE_LIST
+    from ducky_transformers.models.lxmert.modeling_lxmert import LXMERT_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
 if is_tf_available():

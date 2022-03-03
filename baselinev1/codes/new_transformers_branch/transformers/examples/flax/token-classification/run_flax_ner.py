@@ -47,9 +47,9 @@ from transformers import (
     HfArgumentParser,
     is_tensorboard_available,
 )
-from transformers.file_utils import get_full_repo_name
+from ducky_transformers.file_utils import get_full_repo_name
 from transformers.utils import check_min_version
-from transformers.utils.versions import require_version
+from ducky_transformers.utils.versions import require_version
 
 
 logger = logging.getLogger(__name__)

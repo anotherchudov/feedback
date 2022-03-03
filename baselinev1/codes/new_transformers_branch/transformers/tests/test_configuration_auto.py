@@ -20,11 +20,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import transformers.models.auto
-from transformers.models.auto.configuration_auto import CONFIG_MAPPING, AutoConfig
-from transformers.models.bert.configuration_bert import BertConfig
-from transformers.models.roberta.configuration_roberta import RobertaConfig
-from transformers.testing_utils import DUMMY_UNKNOWN_IDENTIFIER
+import ducky_transformers.models.auto
+from ducky_transformers.models.auto.configuration_auto import CONFIG_MAPPING, AutoConfig
+from ducky_transformers.models.bert.configuration_bert import BertConfig
+from ducky_transformers.models.roberta.configuration_roberta import RobertaConfig
+from ducky_transformers.testing_utils import DUMMY_UNKNOWN_IDENTIFIER
 
 
 sys.path.append(str(Path(__file__).parent.parent / "utils"))
@@ -37,7 +37,7 @@ SAMPLE_ROBERTA_CONFIG = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 
 class AutoConfigTest(unittest.TestCase):
     def test_module_spec(self):
-        self.assertIsNotNone(transformers.models.auto.__spec__)
+        self.assertIsNotNone(ducky_transformers.models.auto.__spec__)
         self.assertIsNotNone(importlib.util.find_spec("transformers.models.auto"))
 
     def test_config_from_model_shortcut(self):

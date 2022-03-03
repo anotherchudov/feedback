@@ -20,9 +20,9 @@ from pathlib import Path
 from shutil import copyfile
 
 from transformers import Speech2TextTokenizer, is_speech_available
-from transformers.file_utils import FEATURE_EXTRACTOR_NAME
-from transformers.models.speech_to_text.tokenization_speech_to_text import VOCAB_FILES_NAMES, save_json
-from transformers.testing_utils import require_sentencepiece, require_torch, require_torchaudio
+from ducky_transformers.file_utils import FEATURE_EXTRACTOR_NAME
+from ducky_transformers.models.speech_to_text.tokenization_speech_to_text import VOCAB_FILES_NAMES, save_json
+from ducky_transformers.testing_utils import require_sentencepiece, require_torch, require_torchaudio
 
 from .test_feature_extraction_speech_to_text import floats_list
 

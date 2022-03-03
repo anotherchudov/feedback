@@ -18,7 +18,7 @@ import unittest
 from copy import deepcopy
 
 from transformers import RobertaConfig, is_torch_available
-from transformers.testing_utils import TestCasePlus, require_torch, slow, torch_device
+from ducky_transformers.testing_utils import TestCasePlus, require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_generation_utils import GenerationTesterMixin
@@ -37,7 +37,7 @@ if is_torch_available():
         RobertaForTokenClassification,
         RobertaModel,
     )
-    from transformers.models.roberta.modeling_roberta import (
+    from ducky_transformers.models.roberta.modeling_roberta import (
         ROBERTA_PRETRAINED_MODEL_ARCHIVE_LIST,
         RobertaEmbeddings,
         create_position_ids_from_input_ids,

@@ -18,7 +18,7 @@ import subprocess
 
 from parameterized import parameterized
 from transformers import is_torch_available
-from transformers.testing_utils import (
+from ducky_transformers.testing_utils import (
     ExtendSysPath,
     TestCasePlus,
     execute_subprocess_async,
@@ -27,7 +27,7 @@ from transformers.testing_utils import (
     require_torch_gpu,
     slow,
 )
-from transformers.trainer_utils import set_seed
+from ducky_transformers.trainer_utils import set_seed
 
 
 tests_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))

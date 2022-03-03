@@ -1,11 +1,17 @@
 
+
+# system path for custom Hugging Face
+# ------------------------------------------------------
+import sys
+sys.path.insert(0, './codes')
+# ------------------------------------------------------
+
 from lib2to3.pgen2 import token
 import warnings
 warnings.filterwarnings('ignore')
 
 import os
 import os.path as osp
-import sys
 import random
 
 import argparse
@@ -18,8 +24,6 @@ import torch
 import torch.nn as nn
 import torch.distributed as dist
 
-from transformers import AutoConfig, AutoModel, AutoTokenizer, AutoModelForTokenClassification
-
 # local codes
 from module.utils import get_data_files
 from module.dataset import get_dataloader
@@ -29,6 +33,7 @@ from module.scheduler import get_scheduler
 from model.model import get_model
 
 from module.trainer import Trainer
+
 
 # Hugging Face's Issue
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -169,11 +174,11 @@ if __name__ == "__main__":
     train_dataloader, val_dataloader = get_dataloader(args, train_ids, val_ids, data, csv, all_texts, val_text_ids, class_names, token_weights)
 
     # loss
-    # args.criterion_list = ["crossentropy"]
-    # args.criterion_ratio = [1.]
     # args.class_weight = torch.Tensor(token_weights).to(args.device).half()
     args.criterion_list = ["custom_ce", "custom_rce"]
     args.criterion_ratio = [args.ce_weight, args.rce_weight]
+    # args.criterion_list = ["custom_ce"]
+    # args.criterion_ratio = [1]
     # args.criterion_list = ["focal"]
     # args.criterion_ratio = [1.]
     criterion = get_criterion(args)            

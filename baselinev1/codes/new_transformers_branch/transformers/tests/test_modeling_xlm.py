@@ -16,7 +16,7 @@
 import unittest
 
 from transformers import XLMConfig, is_torch_available
-from transformers.testing_utils import require_torch, slow, torch_device
+from ducky_transformers.testing_utils import require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_generation_utils import GenerationTesterMixin
@@ -35,7 +35,7 @@ if is_torch_available():
         XLMModel,
         XLMWithLMHeadModel,
     )
-    from transformers.models.xlm.modeling_xlm import XLM_PRETRAINED_MODEL_ARCHIVE_LIST
+    from ducky_transformers.models.xlm.modeling_xlm import XLM_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
 class XLMModelTester:

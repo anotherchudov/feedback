@@ -18,7 +18,7 @@ import inspect
 import unittest
 
 from transformers import is_torch_available
-from transformers.testing_utils import require_torch, slow, torch_device
+from ducky_transformers.testing_utils import require_torch, slow, torch_device
 
 from .test_modeling_common import floats_tensor, ids_tensor
 
@@ -37,8 +37,8 @@ if is_torch_available():
         VisionEncoderDecoderModel,
         top_k_top_p_filtering,
     )
-    from transformers.generation_beam_search import BeamSearchScorer
-    from transformers.generation_logits_process import (
+    from ducky_transformers.generation_beam_search import BeamSearchScorer
+    from ducky_transformers.generation_logits_process import (
         ForcedBOSTokenLogitsProcessor,
         ForcedEOSTokenLogitsProcessor,
         HammingDiversityLogitsProcessor,
@@ -52,8 +52,8 @@ if is_torch_available():
         TopKLogitsWarper,
         TopPLogitsWarper,
     )
-    from transformers.generation_stopping_criteria import MaxLengthCriteria, StoppingCriteria, StoppingCriteriaList
-    from transformers.generation_utils import (
+    from ducky_transformers.generation_stopping_criteria import MaxLengthCriteria, StoppingCriteria, StoppingCriteriaList
+    from ducky_transformers.generation_utils import (
         BeamSampleDecoderOnlyOutput,
         BeamSampleEncoderDecoderOutput,
         BeamSearchDecoderOnlyOutput,

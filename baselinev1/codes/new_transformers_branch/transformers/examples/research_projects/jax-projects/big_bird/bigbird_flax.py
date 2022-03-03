@@ -17,7 +17,7 @@ from flax.serialization import from_bytes, to_bytes
 from flax.training import train_state
 from flax.training.common_utils import shard
 from transformers import BigBirdConfig, FlaxBigBirdForQuestionAnswering
-from transformers.models.big_bird.modeling_flax_big_bird import FlaxBigBirdForQuestionAnsweringModule
+from ducky_transformers.models.big_bird.modeling_flax_big_bird import FlaxBigBirdForQuestionAnsweringModule
 
 
 class FlaxBigBirdForNaturalQuestionsModule(FlaxBigBirdForQuestionAnsweringModule):

@@ -17,7 +17,7 @@ import random
 import unittest
 
 from transformers import XLNetConfig, is_torch_available
-from transformers.testing_utils import require_torch, slow, torch_device
+from ducky_transformers.testing_utils import require_torch, slow, torch_device
 
 from .test_configuration_common import ConfigTester
 from .test_generation_utils import GenerationTesterMixin
@@ -36,7 +36,7 @@ if is_torch_available():
         XLNetLMHeadModel,
         XLNetModel,
     )
-    from transformers.models.xlnet.modeling_xlnet import XLNET_PRETRAINED_MODEL_ARCHIVE_LIST
+    from ducky_transformers.models.xlnet.modeling_xlnet import XLNET_PRETRAINED_MODEL_ARCHIVE_LIST
 
 
 class XLNetModelTester:

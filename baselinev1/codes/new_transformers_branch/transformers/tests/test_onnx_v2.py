@@ -5,21 +5,21 @@ from unittest.mock import patch
 
 from parameterized import parameterized
 from transformers import AutoConfig, AutoTokenizer, is_torch_available
-from transformers.onnx import (
+from ducky_transformers.onnx import (
     EXTERNAL_DATA_FORMAT_SIZE_LIMIT,
     OnnxConfig,
     ParameterFormat,
     export,
     validate_model_outputs,
 )
-from transformers.onnx.config import OnnxConfigWithPast
+from ducky_transformers.onnx.config import OnnxConfigWithPast
 
 
 if is_torch_available():
-    from transformers.onnx.features import FeaturesManager
+    from ducky_transformers.onnx.features import FeaturesManager
 
-from transformers.onnx.utils import compute_effective_axis_dimension, compute_serialized_parameters_size
-from transformers.testing_utils import require_onnx, require_torch, slow
+from ducky_transformers.onnx.utils import compute_effective_axis_dimension, compute_serialized_parameters_size
+from ducky_transformers.testing_utils import require_onnx, require_torch, slow
 
 
 @require_onnx
@@ -213,7 +213,7 @@ class OnnxExportTestCaseV2(TestCase):
     """
 
     def _pytorch_export(self, test_name, name, model_name, feature, onnx_config_class_constructor):
-        from transformers.onnx import export
+        from ducky_transformers.onnx import export
 
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         config = AutoConfig.from_pretrained(model_name)

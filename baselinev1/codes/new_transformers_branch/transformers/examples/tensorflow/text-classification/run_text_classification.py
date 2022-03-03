@@ -35,7 +35,7 @@ from transformers import (
     TFTrainingArguments,
     set_seed,
 )
-from transformers.file_utils import CONFIG_NAME, TF2_WEIGHTS_NAME
+from ducky_transformers.file_utils import CONFIG_NAME, TF2_WEIGHTS_NAME
 
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"  # Reduce the amount of console output from TF

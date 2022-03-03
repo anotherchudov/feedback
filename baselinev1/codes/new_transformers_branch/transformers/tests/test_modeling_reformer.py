@@ -16,7 +16,7 @@
 import unittest
 
 from transformers import ReformerConfig, is_torch_available
-from transformers.testing_utils import (
+from ducky_transformers.testing_utils import (
     require_sentencepiece,
     require_tokenizers,
     require_torch,
