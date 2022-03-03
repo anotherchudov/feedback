@@ -60,15 +60,15 @@ feedback
 - Plateau (patient=1)
     - this checked till the end
     - seems to have plenty of rooms for performance increase
-- Just Cross-Entropy Loss
+- Only Cross-Entropy Loss
 - SWA (stabilize valid performance, at least +0.01 boost)
 
 ## ⛔️ Not worked
+- initial learning rate 3e-5
 - gradient accumulation
 - batch_size 1, 6, 8
 - max gradient norm 10.0
-- initial learning rate 3e-5
-- Focal Loss with gamma 2.0
+- Dice Loss / Focal Loss with gamma 2.0
 
 ## 😥 Not sure
 - [reverse cross entropy](https://www.kaggle.com/c/feedback-prize-2021/discussion/306279)

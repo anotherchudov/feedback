@@ -12,6 +12,17 @@ from torch.optim.swa_utils import AveragedModel, SWALR
 
 from .metric import calc_acc, process_sample, make_match_dict
 
+# grad scaler enum helper
+# reference - https://github.com/pytorch/pytorch/blob/1a8bd1a7eb91063d55f00c120ba29361860e6c42/torch/cuda/amp/grad_scaler.py#L31
+# ---------------------------------------------------------------
+from enum import Enum
+
+class OptState(Enum):
+    READY = 0
+    UNSCALED = 1
+    STEPPED = 2
+# ---------------------------------------------------------------
+
 class Trainer():
     def __init__(self, args, model, train_loader, valid_loader, scheduler, optimizer, criterion, class_names):
         self.args = args
@@ -82,6 +93,61 @@ class Trainer():
 
         self.global_step += 1
 
+    def process_sam(self, tokens, mask, label, class_weight, scaler, losses):
+        """Processing for (Adaptive) SAM Optimizer
+        
+        Sharpness-Aware Minimization for Efficiently Improving Generalization
+        - Cannot be used with Gradient Accumulation
+        - Every `swa_save_per_steps` steps
+        """
+        if self.args.grad_acc_steps != 1:
+            raise Exception('sam optimizer cannot be worked with gradient accumulation. disable it.')
+
+        ### first
+        # --------------------------------------------
+        with autocast():
+            outs = self.model(tokens, mask)
+            loss = self.criterion(outs, label, class_weight=class_weight)
+
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_grad_norm)
+        self.optimizer.first_step(zero_grad=True)
+
+        ### Second
+        # --------------------------------------------
+        with autocast():
+            outs = self.model(tokens, mask)
+            loss = self.criterion(outs, label, class_weight=class_weight)
+
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_grad_norm)
+        self.optimizer.second_step(zero_grad=True)
+        # --------------------------------------------
+
+        # save loss
+        losses.append(loss.detach())
+
+        return outs
+
+        # below code is not used due to nan loss error
+        # --------------------------------------------
+        with autocast():
+            outs = self.model(tokens, mask)
+            loss = self.criterion(outs, label, class_weight=class_weight)
+
+        scaler.scale(loss).backward()
+        scaler.unscale_(self.optimizer)
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_grad_norm)
+
+        # code for amp compatibility with sam
+        # replacement for scaler.step(self.optimizer)
+        self.optimizer.first_step(zero_grad=True)
+        optimizer_state = scaler._per_optimizer_states[id(self.optimizer)]
+        optimizer_state["stage"] = OptState.STEPPED
+        scaler.update()
+        # --------------------------------------------
+
+
     def lr(self):
         return self.optimizer.param_groups[0]['lr']
 
@@ -92,11 +158,6 @@ class Trainer():
         train_matches = torch.zeros(16)
         train_labels = torch.zeros(16)
 
-        if self.args.global_attn == 0:
-            model_params = [p for n, p in self.model.named_parameters() if not (n.endswith('_global.bias') or n.endswith('_global.weight'))]
-        else:
-            model_params = [p for p in self.model.parameters()]
-        
         # scaler = GradScaler(65536.0 / self.args.grad_acc_steps)
         scaler = GradScaler()
         pbar = tqdm(enumerate(self.train_loader), total=len(self.train_loader))
@@ -106,23 +167,31 @@ class Trainer():
                 self.optimizer.zero_grad()
             
             tokens, mask, label, class_weight = (x.to(self.args.device) for x in batch)
-            with autocast():
-                outs = self.model(tokens, mask)
-                # loss = self.criterion(outs, label, class_weight=class_weight)
-                loss = self.criterion(outs, label, class_weight=class_weight) / self.args.grad_acc_steps
+            """Sam Optimizer process is decoupled due to different training approach
+           
+            CAUTION:
+            - SAM optimizers cannot be used with Gradient Accumulation
+            """
+            if self.args.optimizer == 'sam':
+                outs = self.process_sam(tokens, mask, label, class_weight, scaler, losses)
+            else:
+                with autocast():
+                    outs = self.model(tokens, mask)
+                    # loss = self.criterion(outs, label, class_weight=class_weight)
+                    loss = self.criterion(outs, label, class_weight=class_weight) / self.args.grad_acc_steps
 
-            # loss
-            scaler.scale(loss).backward()
-            losses.append(loss.detach())
-        
-            # optimizer
-            if (step + 1) % self.args.grad_acc_steps == 0:
-                if self.args.max_grad_norm is not None:
-                    scaler.unscale_(self.optimizer)
-                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_grad_norm)
+                # loss
+                scaler.scale(loss).backward()
+                losses.append(loss.detach())
+            
+                # optimizer
+                if (step + 1) % self.args.grad_acc_steps == 0:
+                    if self.args.max_grad_norm is not None:
+                        scaler.unscale_(self.optimizer)
+                        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_grad_norm)
 
-                scaler.step(self.optimizer)
-                scaler.update()
+                    scaler.step(self.optimizer)
+                    scaler.update()
 
             # SWA - stochastic weight averaging
             """swa scheduler is disabled"""

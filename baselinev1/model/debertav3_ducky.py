@@ -8,10 +8,10 @@
 import torch
 from torch.nn import functional as F
 from torch.utils.checkpoint import checkpoint
-from transformers import DebertaV2Model
+from ducky_transformers import DebertaV2Model
 
-class DebertaV3Large(torch.nn.Module):
-    """microsoft/deberta-v3-large"""
+class DebertaV3LargeDucky(torch.nn.Module):
+    """microsoft/deberta-v3-large that was modified to support 2048 length pos bucket"""
     def __init__(self, args):
         super().__init__()
         self.args = args

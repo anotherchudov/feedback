@@ -48,33 +48,33 @@ def extract_entities(ps, n):
             
     return all_entities
 
-def extract_entities(preds, n):
-    cat_preds = preds.argmax(-1).cpu().numpy()
-    all_entities = {}
-    current_cat = None
-    current_start = None
+# def extract_entities(preds, n):
+#     cat_preds = preds.argmax(-1).cpu().numpy()
+#     all_entities = {}
+#     current_cat = None
+#     current_start = None
 
-    for ix in range(1, n - 1):
-        if cat_preds[ix] % 2 == 1:
-            if current_cat is not None:
-                if current_cat not in all_entities:
-                    all_entities[current_cat] = []
-                all_entities[current_cat].append((current_start, ix - 1))
-            current_cat = (cat_preds[ix] + 1) // 2
-            current_start = ix
-        elif cat_preds[ix] == 0:
-            if current_cat is not None:
-                if current_cat not in all_entities:
-                    all_entities[current_cat] = []
-                all_entities[current_cat].append((current_start, ix - 1))
-            current_cat = None
+#     for ix in range(1, n - 1):
+#         if cat_preds[ix] % 2 == 1:
+#             if current_cat is not None:
+#                 if current_cat not in all_entities:
+#                     all_entities[current_cat] = []
+#                 all_entities[current_cat].append((current_start, ix - 1))
+#             current_cat = (cat_preds[ix] + 1) // 2
+#             current_start = ix
+#         elif cat_preds[ix] == 0:
+#             if current_cat is not None:
+#                 if current_cat not in all_entities:
+#                     all_entities[current_cat] = []
+#                 all_entities[current_cat].append((current_start, ix - 1))
+#             current_cat = None
 
-    if current_cat is not None:
-        if current_cat not in all_entities:
-            all_entities[current_cat] = []
-        all_entities[current_cat].append((current_start, ix))
+#     if current_cat is not None:
+#         if current_cat not in all_entities:
+#             all_entities[current_cat] = []
+#         all_entities[current_cat].append((current_start, ix))
 
-    return all_entities
+#     return all_entities
 
 def map_span_to_word_indices(span, index_map, bounds):
     return (index_map[bounds[span[0], 0]], index_map[bounds[span[1], 1] - 1])

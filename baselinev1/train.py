@@ -45,13 +45,12 @@ def get_config():
     parser.add_argument("--seed", default=0, type=int)
     parser.add_argument("--min_len", default=0, type=int)
     parser.add_argument("--use_groupped_weights", default=False, type=bool)
-    parser.add_argument("--global_attn", default=False, type=int)
     parser.add_argument("--epochs", default=9, type=int)
     parser.add_argument("--batch_size", default=4, type=int)
-    parser.add_argument("--grad_acc_steps", default=2, type=int)
+    parser.add_argument("--grad_acc_steps", default=1, type=int)
     parser.add_argument("--grad_checkpt", default=True, type=bool)
     parser.add_argument("--data_prefix", default='', type=str)
-    parser.add_argument("--max_grad_norm", default=10.0, type=float)
+    parser.add_argument("--max_grad_norm", default=1.0, type=float)
     parser.add_argument("--start_eval_at", default=0, type=int)
     parser.add_argument("--weight_decay", default=1e-2, type=float)
     parser.add_argument("--weights_pow", default=0.1, type=float)
@@ -76,7 +75,7 @@ def get_config():
     parser.add_argument("--momentum", default=0.9, type=float, help="momentum for SGD")
 
     # scheduler
-    parser.add_argument("--lr", default=3e-5, type=float)
+    parser.add_argument("--lr", default=1e-5, type=float)
     parser.add_argument("--min_lr", default=1e-6, type=float)
     parser.add_argument("--warmup_steps", default=500, type=int)
     parser.add_argument("--gamma", default=0.8, type=float, help="gamma for cosine annealing warmup restart scheduler")
@@ -175,11 +174,11 @@ if __name__ == "__main__":
 
     # loss
     # args.class_weight = torch.Tensor(token_weights).to(args.device).half()
-    args.criterion_list = ["custom_ce", "custom_rce"]
-    args.criterion_ratio = [args.ce_weight, args.rce_weight]
-    # args.criterion_list = ["custom_ce"]
-    # args.criterion_ratio = [1]
-    # args.criterion_list = ["focal"]
+    # args.criterion_list = ["custom_ce", "custom_rce"]
+    # args.criterion_ratio = [args.ce_weight, args.rce_weight]
+    args.criterion_list = ["custom_ce"]
+    args.criterion_ratio = [1]
+    # args.criterion_list = ["dice"]
     # args.criterion_ratio = [1.]
     criterion = get_criterion(args)            
 
@@ -188,8 +187,10 @@ if __name__ == "__main__":
     model = get_model(args)
 
     # optimizer
-    args.optimizer = "adafactor"
-    args.optimizer = "adamw"
+    # args.optimizer = "adamw"
+    # args.optimizer = "adafactor"
+    args.optimizer = "sam"
+    # args.optimizer = "adamp"
     optimizer = get_optimizer(args, model)
 
     # scheduler
