@@ -6,18 +6,22 @@
 # sys.path.insert(0, '/home/feedback/working/feedback_ducky/baselinev1/codes')
 
 import torch
+from torch import nn
 from torch.nn import functional as F
 from torch.utils.checkpoint import checkpoint
 from ducky_transformers import DebertaV2Model
 
 class DebertaV3LargeDucky(torch.nn.Module):
-    """microsoft/deberta-v3-large that was modified to support 2048 length pos bucket"""
+    """microsoft/deberta-v3-large that was modified to support 2048 seq length pos bucket"""
     def __init__(self, args):
         super().__init__()
         self.args = args
 
         self.feats = DebertaV2Model.from_pretrained('microsoft/deberta-v3-large')
         self.feats.pooler = None
+
+        # replace the pretrained relation embedding
+        self.replace_rel_embedding()
 
         if args.grad_checkpt:
             self.feats.gradient_checkpointing_enable()
@@ -43,6 +47,18 @@ class DebertaV3LargeDucky(torch.nn.Module):
                 torch.nn.LayerNorm(self.output_length),
                 torch.nn.Linear(self.output_length, 15)
             )
+
+    def replace_rel_embedding(self):
+        """tailored for 2048 seq length pos bucket, which the size is 384"""
+        # create a new embedding layer
+        new_rel_embeddings = nn.Embedding(768, 1024)
+
+        # overwrite the pretrained weights to new relation embedding
+        with torch.no_grad():
+            new_rel_embeddings.weight[:512, :] = self.feats.encoder.rel_embeddings.weight
+
+        # overwrite
+        self.feats.encoder.rel_embeddings = new_rel_embeddings
 
     def forward(self, tokens, mask):
         transformer_output = self.feats(tokens, mask, return_dict=False)[0]

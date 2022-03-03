@@ -51,14 +51,18 @@ feedback
 ```
 
 ### Models
-- `DebertaV3`
+- `DebertaV3` (Original Hugging Face library)
+- `DebertaV3Ducky` (Under local `Ducky Transformer` library)
+    - for seq len 512, DebertaV3 position bucket size is 256
+    - for seq len 2048, position bucket size should be 384
+    - but we are using 256 buckets still, so this model increase it to 384 for finetuning
 
 ## ✅ Things that worked
 - initial learning rate 1e-5
 - max gradient norm 1.0
 - batch_size 4
 - Plateau (patient=1)
-    - this checked till the end
+    - never checked till the end, even middle
     - seems to have plenty of rooms for performance increase
 - Only Cross-Entropy Loss
 - SWA (stabilize valid performance, at least +0.01 boost)

@@ -772,10 +772,12 @@ class DisentangledSelfAttention(nn.Module):
         if "c2p" in self.pos_att_type:
             scale = math.sqrt(pos_key_layer.size(-1) * scale_factor)
             c2p_att = torch.bmm(query_layer, pos_key_layer.transpose(-1, -2))
-            # DUCKY MODIFIED
+            # DUCKY MODIFIED - expand pos bucket from 256 to 384
+            #                - due to seq len change from 512 to 2048
             # ----------------------------------------------------
-            c2p_pos = torch.clamp(relative_pos + att_span, 0, att_span * 2 - 1)
-            # c2p_pos = torch.clamp(relative_pos + att_span, 1, att_span * 2 - 1)
+            # c2p_pos = torch.clamp(relative_pos + att_span, 0, att_span * 2 - 1)
+            c2p_pos = relative_pos + att_span
+            c2p_pos = c2p_pos + (c2p_pos <= 0).type(torch.long) * (383*2 + 1)
             # ----------------------------------------------------
             c2p_att = torch.gather(
                 c2p_att,
@@ -798,10 +800,12 @@ class DisentangledSelfAttention(nn.Module):
             else:
                 r_pos = relative_pos
 
-            # DUCKY MODIFIED
+            # DUCKY MODIFIED - expand pos bucket from 256 to 384
+            #                - due to seq len change from 512 to 2048
             # ----------------------------------------------------
-            p2c_pos = torch.clamp(-r_pos + att_span, 0, att_span * 2 - 1)
-            # p2c_pos = torch.clamp(-r_pos + att_span, 1, att_span * 2 - 1)
+            # p2c_pos = torch.clamp(-r_pos + att_span, 0, att_span * 2 - 1)
+            p2c_pos = -r_pos + att_span
+            p2c_pos = p2c_pos + (p2c_pos <= 0).type(torch.long) * (383*2 + 1)
             # ----------------------------------------------------
 
         if "p2c" in self.pos_att_type:

@@ -183,13 +183,14 @@ if __name__ == "__main__":
     criterion = get_criterion(args)            
 
     # model
-    args.model = 'microsoft/deberta-v3-large'
+    # args.model = 'microsoft/deberta-v3-large'
+    args.model = 'microsoft/deberta-v3-large-ducky'
     model = get_model(args)
 
     # optimizer
-    # args.optimizer = "adamw"
+    args.optimizer = "adamw"
     # args.optimizer = "adafactor"
-    args.optimizer = "sam"
+    # args.optimizer = "sam"
     # args.optimizer = "adamp"
     optimizer = get_optimizer(args, model)
 

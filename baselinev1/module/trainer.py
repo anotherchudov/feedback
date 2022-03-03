@@ -291,7 +291,7 @@ class Trainer():
             if val_score > best_f1:
                 best_f1 = val_score
                 save_name = f"debertav3_fold{self.args.val_fold}_f1{best_f1:.4f}.pth"
-                if best_f1 > 0.683:
+                if best_f1 > 0.687:
                     torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
                     print("save model .....")
 
@@ -301,7 +301,7 @@ class Trainer():
         
         # save before the training ends
         save_name = f"debertav3_fold{self.args.val_fold}_f1{best_f1:.4f}.pth"
-        if best_f1 > 0.683:
+        if best_f1 > 0.687:
             torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
             print("save model .....")
 
