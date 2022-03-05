@@ -138,6 +138,7 @@ def get_optimizer(args, model):
             warmup_init=False,
         )
 
+    # layerwise learning rate
     
     optimizer.zero_grad()
     

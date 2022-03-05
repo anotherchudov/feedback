@@ -72,6 +72,7 @@ feedback
 - gradient accumulation
 - batch_size 1, 6, 8
 - max gradient norm 10.0
+- SAM Optimzier
 - Dice Loss / Focal Loss with gamma 2.0
 
 ## 😥 Not sure

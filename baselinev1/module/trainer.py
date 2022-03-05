@@ -10,7 +10,7 @@ from torch.cuda.amp import autocast, GradScaler
 from torch.optim.swa_utils import AveragedModel, SWALR
 
 
-from .metric import calc_acc, process_sample, make_match_dict
+from .metric import calc_acc, process_sample, init_match_dict, make_match_dict
 
 # grad scaler enum helper
 # reference - https://github.com/pytorch/pytorch/blob/1a8bd1a7eb91063d55f00c120ba29361860e6c42/torch/cuda/amp/grad_scaler.py#L31
@@ -61,12 +61,17 @@ class Trainer():
         # When to start SWA?
         # setting aims to start swa when learning rate hits the minimum
         half_cycle_steps = self.args.steps_per_epoch // 2
+
+        start_epoch = max(int(self.args.epochs * self.args.swa_start_ratio), 1)
+        print(f'[ SWA ] - Applied from {start_epoch + 1} epochs')
         if self.args.scheduler in ['plateau',
                                    'custom_warmup',
                                    'cosine_annealing_warmup_restart']:
-            cycle_n = 2
+            cycle_n = start_epoch * 2
         elif self.args.scheduler in ['cosine_annealing']:
-            cycle_n = 3
+            # cosine annealing is setted as one cycle
+            # to assure that the learning rate is minimum when the model is saved
+            cycle_n = 1 + start_epoch * 2
         self.swa_start = half_cycle_steps * cycle_n
 
         # swa will be saved every steps
@@ -84,6 +89,9 @@ class Trainer():
             if self.swa_step == 0:
                 self.swa_model.update_parameters(self.model)
                 self.val_model = self.swa_model.module
+                print('-' * 20)
+                print('[ SWA ] - First update of the SWA model')
+                print('-' * 20)
                 # self.run_scheduler = False
             elif (self.swa_step + 1) % self.swa_save_per_steps == 0:
                 self.swa_model.update_parameters(self.model)
@@ -228,12 +236,22 @@ class Trainer():
         self.model.eval()
 
         losses = []
+
+        # 3-way validation strategy
         val_matches = torch.zeros(16)
         val_labels = torch.zeros(16)
-        match_stats = {ix:  {'fp': 0, 'fn': 0, 'tp': 0} for ix in range(1, 8)}
-        f1s = np.zeros(8)
-        rec = np.zeros(7)
-        prec = np.zeros(7)
+        match_stats_bug = {ix:  {'fp': 0, 'fn': 0, 'tp': 0} for ix in range(1, 8)}
+        f1s_bug = np.zeros(8)
+        rec_bug = np.zeros(7)
+        prec_bug = np.zeros(7)
+        match_stats_clean = {ix:  {'fp': 0, 'fn': 0, 'tp': 0} for ix in range(1, 8)}
+        f1s_clean = np.zeros(8)
+        rec_clean = np.zeros(7)
+        prec_clean = np.zeros(7)
+        match_stats_wonho = {ix:  {'fp': 0, 'fn': 0, 'tp': 0} for ix in range(1, 8)}
+        f1s_wonho = np.zeros(8)
+        rec_wonho = np.zeros(7)
+        prec_wonho = np.zeros(7)
 
         for tokens, mask, labels, labels_mask, bounds, gt_dicts, index_map, num_tokens in tqdm(self.valid_loader, total=len(self.valid_loader)):
             with torch.no_grad():
@@ -249,62 +267,94 @@ class Trainer():
                 val_matches += match_updates[0]
                 val_labels += match_updates[1]
                 for sample_ix, num in enumerate(num_tokens):
-                    match_stats = process_sample(outs[sample_ix], labels[sample_ix], 
-                                                    index_map[sample_ix], bounds[sample_ix],
-                                                    gt_dicts[sample_ix],
-                                                    num, match_stats, min_len=self.args.min_len)
+                    match_stats_bug = process_sample(outs[sample_ix], labels[sample_ix], index_map[sample_ix], bounds[sample_ix], gt_dicts[sample_ix], num, match_stats_bug, version='bug')
+                    match_stats_clean = process_sample(outs[sample_ix], labels[sample_ix], index_map[sample_ix], bounds[sample_ix], gt_dicts[sample_ix], num, match_stats_clean, version='clean')
+                    match_stats_wonho = process_sample(outs[sample_ix], labels[sample_ix], index_map[sample_ix], bounds[sample_ix], gt_dicts[sample_ix], num, match_stats_wonho, version='wonho')
+
+        print(f'Currenlty on [ bug ] version')
+        print(f'Predicted match stats: {match_stats_bug}\n')
+        print(f'Currenlty on [ clean ] version')
+        print(f'Predicted match stats: {match_stats_clean}\n')
+        print(f'Currenlty on [ wonho ] version')
+        print(f'Predicted match stats: {match_stats_wonho}\n')
+        print('-' * 50)
 
         # validation Acc per class log
         valid_acc_per_class = val_matches / val_labels
         print(f'Valid Acc per class: {valid_acc_per_class}')
 
         for ix in range(1, 8):
-            f1s[ix] = match_stats[ix]['tp'] / (1e-7 + match_stats[ix]['tp'] + .5 * (match_stats[ix]['fp'] + match_stats[ix]['fn']))
-            rec[ix - 1] = match_stats[ix]['tp'] / (1e-7 + match_stats[ix]['tp'] + match_stats[ix]['fn'])
-            prec[ix - 1] = match_stats[ix]['tp'] / (1e-7 + match_stats[ix]['tp'] + match_stats[ix]['fp'])
+            f1s_bug[ix] = match_stats_bug[ix]['tp'] / (1e-7 + match_stats_bug[ix]['tp'] + .5 * (match_stats_bug[ix]['fp'] + match_stats_bug[ix]['fn']))
+            rec_bug[ix - 1] = match_stats_bug[ix]['tp'] / (1e-7 + match_stats_bug[ix]['tp'] + match_stats_bug[ix]['fn'])
+            prec_bug[ix - 1] = match_stats_bug[ix]['tp'] / (1e-7 + match_stats_bug[ix]['tp'] + match_stats_bug[ix]['fp'])
 
-        f1s[0] = np.mean(f1s[1:])
+            f1s_clean[ix] = match_stats_clean[ix]['tp'] / (1e-7 + match_stats_clean[ix]['tp'] + .5 * (match_stats_clean[ix]['fp'] + match_stats_clean[ix]['fn']))
+            rec_clean[ix - 1] = match_stats_clean[ix]['tp'] / (1e-7 + match_stats_clean[ix]['tp'] + match_stats_clean[ix]['fn'])
+            prec_clean[ix - 1] = match_stats_clean[ix]['tp'] / (1e-7 + match_stats_clean[ix]['tp'] + match_stats_clean[ix]['fp'])
+
+            f1s_wonho[ix] = match_stats_wonho[ix]['tp'] / (1e-7 + match_stats_wonho[ix]['tp'] + .5 * (match_stats_wonho[ix]['fp'] + match_stats_wonho[ix]['fn']))
+            rec_wonho[ix - 1] = match_stats_wonho[ix]['tp'] / (1e-7 + match_stats_wonho[ix]['tp'] + match_stats_wonho[ix]['fn'])
+            prec_wonho[ix - 1] = match_stats_wonho[ix]['tp'] / (1e-7 + match_stats_wonho[ix]['tp'] + match_stats_wonho[ix]['fp'])
+
+        f1s_bug[0] = np.mean(f1s_bug[1:])
+        f1s_clean[0] = np.mean(f1s_clean[1:])
+        f1s_wonho[0] = np.mean(f1s_wonho[1:])
 
         val_accs = (val_matches / val_labels).cpu().numpy()
         val_labels = val_labels.cpu().numpy()
+        val_loss = torch.stack(losses).mean().item()
 
-        return torch.stack(losses).mean().item(), val_accs, val_labels, f1s, rec, prec
+        return val_loss, val_accs, val_labels, f1s_bug, rec_bug, prec_bug, f1s_clean, rec_clean, prec_clean, f1s_wonho, rec_wonho, prec_wonho
 
     def train(self):
 
-        best_f1 = 0
+        best_f1_bug = 0
+        best_f1_clean = 0
+        best_f1_wonho = 0
         for epoch in range(1, self.args.epochs + 1):
 
             # train
             train_acc = self.train_one_epoch(epoch)
 
             # validation
-            val_ce, val_accs, val_labels, f1s, rec, prec = self.valid_one_epoch(epoch)
-            val_score = f1s[0]
+            val_loss, val_accs, val_labels, f1s_bug, rec_bug, prec_bug, f1s_clean, rec_clean, prec_clean, f1s_wonho, rec_wonho, prec_wonho = self.valid_one_epoch(epoch)
+            val_score_bug = f1s_bug[0]
+            val_score_clean = f1s_clean[0]
+            val_score_wonho = f1s_wonho[0]
 
-            print(f'{val_score}')
+            print(f'Validation [ Bug ] {val_score_bug}')
+            print(f'Validation [ Clean ] {val_score_clean}')
+            print(f'Validation [ Wonho ] {val_score_wonho}')
 
-            log_dict = {}
-            log_dict.update(make_match_dict(val_ce, val_accs, val_labels, self.class_names, f'ValSWA', (f1s, rec, prec)))
+            log_dict = init_match_dict(val_loss, val_accs, self.class_names)
+            log_dict = make_match_dict(log_dict, self.class_names, 'Bug', (f1s_bug, rec_bug, prec_bug))
+            log_dict = make_match_dict(log_dict, self.class_names, 'Clean', (f1s_clean, rec_clean, prec_clean))
+            log_dict = make_match_dict(log_dict, self.class_names, 'Wonho', (f1s_wonho, rec_wonho, prec_wonho))
             wandb.log(log_dict) 
 
-            if val_score > best_f1:
-                best_f1 = val_score
-                save_name = f"debertav3_fold{self.args.val_fold}_f1{best_f1:.4f}.pth"
-                if best_f1 > 0.687:
+            if val_score_bug > best_f1_bug:
+                best_f1_bug = val_score_bug
+                save_name = f"bug_debertav3_fold{str(self.args.val_fold)}_f1{best_f1_bug:.4f}.pth"
+                if best_f1_bug > 0.683:
                     torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
-                    print("save model .....")
+                    print("[ Bug version ] saving model")
+            if val_score_clean > best_f1_clean:
+                best_f1_clean = val_score_clean
+                save_name = f"clean_debertav3_fold{str(self.args.val_fold)}_f1{best_f1_clean:.4f}.pth"
+                if best_f1_clean > 0.690:
+                    torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
+                    print("[ Clean version ] saving model")
+            if val_score_wonho > best_f1_wonho:
+                best_f1_wonho = val_score_wonho
+                save_name = f"wonho_debertav3_fold{str(self.args.val_fold)}_f1{best_f1_wonho:.4f}.pth"
+                if best_f1_wonho > 0.700:
+                    torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
+                    print("[ Wonho version ] saving model")
 
             # scheduler
             if self.run_scheduler and self.args.scheduler == 'plateau':
-                self.scheduler.step(best_f1)
+                self.scheduler.step(-val_loss)
         
-        # save before the training ends
-        save_name = f"debertav3_fold{self.args.val_fold}_f1{best_f1:.4f}.pth"
-        if best_f1 > 0.687:
-            torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
-            print("save model .....")
-
-        return best_f1
+        return best_f1_bug, best_f1_clean, best_f1_wonho
 
 

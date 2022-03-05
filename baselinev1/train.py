@@ -78,7 +78,7 @@ def get_config():
     parser.add_argument("--lr", default=1e-5, type=float)
     parser.add_argument("--min_lr", default=1e-6, type=float)
     parser.add_argument("--warmup_steps", default=500, type=int)
-    parser.add_argument("--gamma", default=0.8, type=float, help="gamma for cosine annealing warmup restart scheduler")
+    parser.add_argument("--gamma", default=0.9, type=float, help="gamma for cosine annealing warmup restart scheduler")
     parser.add_argument("--cycle_mult", default=1.0, type=float, help="cycle length adjustment for cosine annealing warmup restart scheduler")
 
     # model related arguments
@@ -89,7 +89,8 @@ def get_config():
 
     # swa
     parser.add_argument("--swa", action="store_true", help="use stochastic weight averaging")
-    parser.add_argument("--swa_update_per_epoch", default=3, type=int)
+    parser.add_argument("--swa_update_per_epoch", default=1, type=int)
+    parser.add_argument("--swa_start_ratio", default=0.1, type=float, help="start swa after this ratio of total epochs")
 
     args = parser.parse_args()
 
@@ -147,9 +148,6 @@ if __name__ == "__main__":
     wandb_run = wandb_setting(args)
     wandb_run.name = f'debertav3_fold_lr{args.lr}_{args.wandb_comment}'
 
-    # log for configuration
-    print(args)
-
     class_names = ['None',
                    'Lead',
                    'Position',
@@ -197,15 +195,20 @@ if __name__ == "__main__":
     # scheduler
     # cosine - (one cycle learning) the learning rate will be decayed by a factor of 0.5 every 1 epochs
     args.steps_per_epoch = len(train_dataloader)
-    args.scheduler = "plateau"
+    # args.scheduler = "plateau"
     # args.scheduler = "custom_warmup"
     # args.scheduler = "cosine_annealing"
-    # args.scheduler = 'cosine_annealing_warmup_restart'
+    args.scheduler = 'cosine_annealing_warmup_restart'
     scheduler = get_scheduler(args, optimizer)
+
+    # log for configuration
+    print(args)
 
     # train
     trainer = Trainer(args, model, train_dataloader, val_dataloader, scheduler, optimizer, criterion, class_names)
-    best_f1 = trainer.train()
+    best_f1_bug, best_f1_clean, best_f1_wonho = trainer.train()
 
-    print(best_f1)
+    print(f'[ Bug ] best f1 - {best_f1_bug}')
+    print(f'[ Clean ] best f1 - {best_f1_clean}')
+    print(f'[ Wonho ] best f1 - {best_f1_wonho}')
     
