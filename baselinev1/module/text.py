@@ -125,11 +125,12 @@ class TextAugmenter:
         
         # disable the cache when label cache is operating
         discourse_boundary_cache = False if cache else True
-        discourse_boundary = self.get_discourse_boundary(text_id, text, text_df, revise=True, cache=discourse_boundary_cache)
+        text, discourse_boundary = self.get_discourse_boundary(text_id, text, text_df, revise=True, cache=discourse_boundary_cache)
 
         # 4. tokenize the text
         # TODO: truncate token length that exceeds max_len
         tokenizer_outs = self.tokenizer(text, return_offsets_mapping=True)
+        tokenizer_outs['input_ids'] = [x if x != 126861 else 128000 for x in tokenizer_outs['input_ids']]
 
         # 5. calculate the label
         """labels are consisted with 4 types of data
@@ -546,7 +547,7 @@ class TextAugmenter:
                 return self.discourse_boundary_cache[text_id]
 
         if revise:
-            discourse_boundary = self.recalculate_entity_boundary(text, text_df)
+            text, discourse_boundary = self.recalculate_entity_boundary(text, text_df)
         else:
             discourse_boundary = text_df[['discourse_start', 'discourse_end', 'discourse_type']].values
 
@@ -554,7 +555,7 @@ class TextAugmenter:
         if cache:
             self.discourse_boundary_cache[text_id] = discourse_boundary
         
-        return discourse_boundary
+        return text, discourse_boundary
 
     def recalculate_entity_boundary(self, text, text_df):
         """recalculate the entity boundary
@@ -565,16 +566,25 @@ class TextAugmenter:
             text_df (pandas.DataFrame): the dataframe file for each text
 
         Returns:
+            text (str): the text of each text_id
             ent_boundaries (list): list that contains the entity boundary
                                     [(0, 92, 'Lead'),
                                      (93, 130, 'Position'),
                                      (285, 356, 'Claim')]
         """
+        fix_text = lambda x: x.replace('\n', '‽')
+
+        # preprocess the text
+        text = fix_text(text.strip())
+
         ent_boundaries = []
         pointer = 0
         
         for row in text_df.itertuples():
             entity_text = row.discourse_text
+
+            # preprocess the entity text
+            entity_text = fix_text(row.discourse_text.strip())
 
             # regex to find text start with alphanumeric (a-zA-Z0-9)
             entity_text = entity_text[next(self.alphanumeric_re.finditer(entity_text)).start():]
@@ -597,7 +607,7 @@ class TextAugmenter:
             ent_boundaries.append((starts_at, starts_at + len(entity_text), row.discourse_type))
             pointer = starts_at + len(entity_text)
                 
-        return ent_boundaries
+        return text, ent_boundaries
 
     def make_one_hot(self, indices, num_labels):
         """Make one hot encoding
@@ -677,6 +687,78 @@ class TextAugmenter:
                         current_target = 0
 
                 all_boundaries.popleft()
+                if not all_boundaries:
+                    break
+            else:
+                targets[token_ix] = current_target
+
+        # one-hot encoding
+        targets = self.make_one_hot(targets, 15)
+
+        # Generate label
+        tokens = np.zeros(max_len, dtype='i8')
+        token_labels = np.zeros((max_len, 15), dtype='f4')
+        attention_mask = np.zeros(max_len, dtype='f4')
+
+        tokens[:token_len] = tokenizer_outs['input_ids']
+        token_labels[:token_len] = targets
+        attention_mask[:token_len] = tokenizer_outs['attention_mask']
+
+        label = (tokens, token_labels, attention_mask, token_len)
+
+        return label
+
+    def token_labeling(self, text, tokenizer_outs, ent_boundaries, cat2id, max_len=2048):
+        """label the tokens
+        Author - sergei chudov
+
+        Args:
+            text (str): literally the text of each text_id
+            tokenizer_outs (list): list of tokenizer outputs
+            ent_boundaries (list): list of entity boundaries
+            cat2id (dict): dictionary that maps the category to id
+            max_len (int): max length of the text
+        Returns:
+            label (tuple): label consisted with 3 types of data
+                            - tokens (max_len)
+                            - token labels (max_len, num_labels)
+                            - attention mask (max_len)
+                            - number of tokens (1)
+        """
+        all_boundaries = [(z, x[-1], t) for x in ent_boundaries for z, t in zip(x[:2], ('start', 'end'))]
+                
+        token_len = len(tokenizer_outs['input_ids'])
+        current_target = 0
+
+        targets = np.zeros(token_len, dtype='i8')
+        for token_ix in range(token_len):
+            token_start_ix, token_end_ix = tokenizer_outs['offset_mapping'][token_ix]
+            if token_end_ix != 0 and (all_boundaries[0][2] == 'end' and token_end_ix >= all_boundaries[0][0])\
+                                or (all_boundaries[0][2] == 'start' and token_end_ix > all_boundaries[0][0]):
+
+                if all_boundaries[0][2] == 'start':
+                    current_target = cat2id[all_boundaries[0][1]]
+                    targets[token_ix] = current_target
+                    if token_end_ix == all_boundaries[1][0]:
+                        current_target = 0
+                        all_boundaries.pop(0)
+                    else:
+                        current_target += 1
+                else:
+                    if len(all_boundaries) > 1 and token_end_ix > all_boundaries[1][0]:
+                        if token_start_ix >= all_boundaries[1][0]:
+                            assert text[all_boundaries[0][0] - 1] == '¨'
+                        all_boundaries.pop(0)
+                        current_target = cat2id[all_boundaries[0][1]]
+                        targets[token_ix] = current_target
+                        current_target += 1
+
+                    else:
+                        if token_start_ix >= all_boundaries[0][0]:
+                            current_target = 0
+                        targets[token_ix] = current_target
+                        current_target = 0
+                all_boundaries.pop(0)
                 if not all_boundaries:
                     break
             else:
