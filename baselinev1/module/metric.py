@@ -64,7 +64,6 @@ def extract_entities_clean(ps, n):
             
     return all_entities
 
-
 def extract_entities_wonho(ps, n):
     START_WITH_I = True
     LOOK_AHEAD = True
@@ -292,18 +291,17 @@ def process_sample(raw_ps, raw_gts, index_map, bounds, gt_spans, num_tokens, mat
                 match_stats[cat_ix]['tp'] += 1
                 unused_g_ix.remove(g_ix)
                 unused_p_ix.remove(p_ix)
-                
 
     return match_stats
 
-def init_match_dict(losses, accs, class_names):
+def init_match_dict(losses):
     log_dict = {}
     log_dict.update({f'valid_loss': losses})
-    log_dict.update({f'valid_ACC#' + class_names[(x + 1) // 2] + ('_B' if x % 2 == 1 else '_I'): accs[x]
-                    for x in range(1, 15)})
-    log_dict.update({f'valid_ACC#' + 'None': accs[0], f'valid_ACC#' + 'ALL': accs[-1]})
-    log_dict.update({f'valid_A_' + 'B': accs[1:-1:2].mean(), f'valid_A_' + 'I': accs[:-1:2].mean(),
-                    f'valid_A_' + 'MEAN': accs[:-1].mean()})
+    # log_dict.update({f'valid_ACC#' + class_names[(x + 1) // 2] + ('_B' if x % 2 == 1 else '_I'): accs[x]
+    #                 for x in range(1, 15)})
+    # log_dict.update({f'valid_ACC#' + 'None': accs[0], f'valid_ACC#' + 'ALL': accs[-1]})
+    # log_dict.update({f'valid_A_' + 'B': accs[1:-1:2].mean(), f'valid_A_' + 'I': accs[:-1:2].mean(),
+    #                 f'valid_A_' + 'MEAN': accs[:-1].mean()})
                 
     return log_dict
 

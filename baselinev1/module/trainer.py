@@ -163,8 +163,12 @@ class Trainer():
         self.model.train()
 
         losses = []
-        train_matches = torch.zeros(16)
-        train_labels = torch.zeros(16)
+        match_stats = {ix:  {'fp': 0, 'fn': 0, 'tp': 0} for ix in range(1, 8)}
+        f1s = np.zeros(8)
+        rec = np.zeros(7)
+        prec = np.zeros(7)
+        # train_matches = torch.zeros(16)
+        # train_labels = torch.zeros(16)
 
         # scaler = GradScaler(65536.0 / self.args.grad_acc_steps)
         scaler = GradScaler()
@@ -216,20 +220,21 @@ class Trainer():
 
             # metric
             with torch.no_grad():
-                match_updates = calc_acc(outs, label, class_weight)
-                train_matches += match_updates[0]
-                train_labels += match_updates[1]
-                train_acc_per_class = train_matches / train_labels
-                train_acc = train_acc_per_class.mean().item()
+                ...
+                # match_updates = calc_acc(outs, label, class_weight)
+                # train_matches += match_updates[0]
+                # train_labels += match_updates[1]
+                # train_acc_per_class = train_matches / train_labels
+                # train_acc = train_acc_per_class.mean().item()
 
                 # log 
-                if (step + 1) % self.args.print_acc == 0:
-                    print(f'Epoch: {epoch} | Step: {step + 1} | Train Acc per class: {train_acc_per_class}')
+                if (step + 1) % self.args.print_f1_per_step == 0:
+                    ...
+                    # print(f'Epoch: {epoch} | Step: {step + 1} | Train Acc per class: {train_acc_per_class}')
             
-            description = f"[ TRAIN ] epoch {epoch} lr {self.lr():.7f} acc: {train_acc:.4f} loss: {torch.stack(losses).mean().item(): .4f}"
+            description = f"[ TRAIN ] epoch {epoch} lr {self.lr():.7f} loss: {torch.stack(losses).mean().item(): .4f}"
             pbar.set_description(description)
 
-        return train_acc
 
     
     def valid_one_epoch(self, epoch):
@@ -238,8 +243,8 @@ class Trainer():
         losses = []
 
         # 3-way validation strategy
-        val_matches = torch.zeros(16)
-        val_labels = torch.zeros(16)
+        # val_matches = torch.zeros(16)
+        # val_labels = torch.zeros(16)
         match_stats_bug = {ix:  {'fp': 0, 'fn': 0, 'tp': 0} for ix in range(1, 8)}
         f1s_bug = np.zeros(8)
         rec_bug = np.zeros(7)
@@ -263,9 +268,9 @@ class Trainer():
 
                 losses.append(loss)
 
-                match_updates = calc_acc(outs, label, class_weight)
-                val_matches += match_updates[0]
-                val_labels += match_updates[1]
+                # match_updates = calc_acc(outs, label, class_weight)
+                # val_matches += match_updates[0]
+                # val_labels += match_updates[1]
                 for sample_ix, num in enumerate(num_tokens):
                     match_stats_bug = process_sample(outs[sample_ix], labels[sample_ix], index_map[sample_ix], bounds[sample_ix], gt_dicts[sample_ix], num, match_stats_bug, version='bug')
                     match_stats_clean = process_sample(outs[sample_ix], labels[sample_ix], index_map[sample_ix], bounds[sample_ix], gt_dicts[sample_ix], num, match_stats_clean, version='clean')
@@ -280,8 +285,8 @@ class Trainer():
         print('-' * 50)
 
         # validation Acc per class log
-        valid_acc_per_class = val_matches / val_labels
-        print(f'Valid Acc per class: {valid_acc_per_class}')
+        # valid_acc_per_class = val_matches / val_labels
+        # print(f'Valid Acc per class: {valid_acc_per_class}')
 
         for ix in range(1, 8):
             f1s_bug[ix] = match_stats_bug[ix]['tp'] / (1e-7 + match_stats_bug[ix]['tp'] + .5 * (match_stats_bug[ix]['fp'] + match_stats_bug[ix]['fn']))
@@ -300,11 +305,11 @@ class Trainer():
         f1s_clean[0] = np.mean(f1s_clean[1:])
         f1s_wonho[0] = np.mean(f1s_wonho[1:])
 
-        val_accs = (val_matches / val_labels).cpu().numpy()
-        val_labels = val_labels.cpu().numpy()
+        # val_accs = (val_matches / val_labels).cpu().numpy()
+        # val_labels = val_labels.cpu().numpy()
         val_loss = torch.stack(losses).mean().item()
 
-        return val_loss, val_accs, val_labels, f1s_bug, rec_bug, prec_bug, f1s_clean, rec_clean, prec_clean, f1s_wonho, rec_wonho, prec_wonho
+        return val_loss, f1s_bug, rec_bug, prec_bug, f1s_clean, rec_clean, prec_clean, f1s_wonho, rec_wonho, prec_wonho
 
     def train(self):
 
@@ -314,10 +319,10 @@ class Trainer():
         for epoch in range(1, self.args.epochs + 1):
 
             # train
-            train_acc = self.train_one_epoch(epoch)
+            self.train_one_epoch(epoch)
 
             # validation
-            val_loss, val_accs, val_labels, f1s_bug, rec_bug, prec_bug, f1s_clean, rec_clean, prec_clean, f1s_wonho, rec_wonho, prec_wonho = self.valid_one_epoch(epoch)
+            val_loss, f1s_bug, rec_bug, prec_bug, f1s_clean, rec_clean, prec_clean, f1s_wonho, rec_wonho, prec_wonho = self.valid_one_epoch(epoch)
             val_score_bug = f1s_bug[0]
             val_score_clean = f1s_clean[0]
             val_score_wonho = f1s_wonho[0]
@@ -326,7 +331,7 @@ class Trainer():
             print(f'Validation [ Clean ] {val_score_clean}')
             print(f'Validation [ Wonho ] {val_score_wonho}')
 
-            log_dict = init_match_dict(val_loss, val_accs, self.class_names)
+            log_dict = init_match_dict(val_loss)
             log_dict = make_match_dict(log_dict, self.class_names, 'Bug', (f1s_bug, rec_bug, prec_bug))
             log_dict = make_match_dict(log_dict, self.class_names, 'Clean', (f1s_clean, rec_clean, prec_clean))
             log_dict = make_match_dict(log_dict, self.class_names, 'Wonho', (f1s_wonho, rec_wonho, prec_wonho))

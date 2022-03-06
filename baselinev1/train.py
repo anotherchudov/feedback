@@ -65,7 +65,7 @@ def get_config():
     parser.add_argument("--wandb_user", default='ducky', type=str)
     parser.add_argument("--wandb_project", default='feedback_deberta_large', type=str)
     parser.add_argument("--wandb_comment", default="", type=str, help="comment will be added at the back of wandb project name")
-    parser.add_argument("--print_acc", default=500, type=int, help="print accuracy of each class every `print_acc` steps")
+    parser.add_argument("--print_f1_per_step", default=500, type=int, help="print f1 of each class every `print_acc` steps")
 
     # optimizer
     parser.add_argument("--label_smoothing", default=0.1, type=float)
@@ -91,6 +91,12 @@ def get_config():
     parser.add_argument("--swa", action="store_true", help="use stochastic weight averaging")
     parser.add_argument("--swa_update_per_epoch", default=1, type=int)
     parser.add_argument("--swa_start_ratio", default=0.1, type=float, help="start swa after this ratio of total epochs")
+
+    # online dataset
+    parser.add_argument("--online_dataset", action="store_true", help="use dataset that directly preprocess text online")
+    parser.add_argument("--noise_injection", default=False, type=bool, help="use noise injection")
+    parser.add_argument("--back_translation", default=False, type=bool, help="use back translation")
+    parser.add_argument("--grammer_correction", default=False, type=bool, help="use grammer correction")
 
     args = parser.parse_args()
 
@@ -168,14 +174,14 @@ if __name__ == "__main__":
 
     # data
     all_texts, token_weights, data, csv, train_ids, val_ids, train_text_ids, val_text_ids = get_data_files(args)
-    train_dataloader, val_dataloader = get_dataloader(args, train_ids, val_ids, data, csv, all_texts, val_text_ids, class_names, token_weights)
+    train_dataloader, val_dataloader = get_dataloader(args, train_ids, val_ids, data, csv, all_texts, train_text_ids, val_text_ids, class_names, token_weights)
 
     # loss
     # args.class_weight = torch.Tensor(token_weights).to(args.device).half()
-    # args.criterion_list = ["custom_ce", "custom_rce"]
-    # args.criterion_ratio = [args.ce_weight, args.rce_weight]
-    args.criterion_list = ["custom_ce"]
-    args.criterion_ratio = [1]
+    args.criterion_list = ["custom_ce", "custom_rce"]
+    args.criterion_ratio = [args.ce_weight, args.rce_weight]
+    # args.criterion_list = ["custom_ce"]
+    # args.criterion_ratio = [1.]
     # args.criterion_list = ["dice"]
     # args.criterion_ratio = [1.]
     criterion = get_criterion(args)            
@@ -195,13 +201,13 @@ if __name__ == "__main__":
     # scheduler
     # cosine - (one cycle learning) the learning rate will be decayed by a factor of 0.5 every 1 epochs
     args.steps_per_epoch = len(train_dataloader)
-    # args.scheduler = "plateau"
+    args.scheduler = "plateau"
     # args.scheduler = "custom_warmup"
     # args.scheduler = "cosine_annealing"
-    args.scheduler = 'cosine_annealing_warmup_restart'
+    # args.scheduler = 'cosine_annealing_warmup_restart'
     scheduler = get_scheduler(args, optimizer)
 
-    # log for configuration
+    # configuration log
     print(args)
 
     # train
