@@ -5,6 +5,7 @@ wandb/
 # model
 *.pt
 *.pth
+*.bin
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

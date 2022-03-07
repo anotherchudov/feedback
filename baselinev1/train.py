@@ -40,6 +40,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def get_config():
     parser = argparse.ArgumentParser(description="use huggingface models")
+    parser.add_argument("--val_fold", default=0, type=int)
     parser.add_argument("--dataset_path", default='../../feedback-prize-2021', type=str)
     parser.add_argument("--save_path", default='result', type=str)
     parser.add_argument("--seed", default=0, type=int)
@@ -56,12 +57,12 @@ def get_config():
     parser.add_argument("--weights_pow", default=0.1, type=float)
     parser.add_argument("--dataset_version", default=2, type=int)
     parser.add_argument("--decay_bias", default=False, type=bool)
-    parser.add_argument("--val_fold", default=0, type=int)
     parser.add_argument("--num_worker", default=8, type=int)
     parser.add_argument("--local_rank", type=int, default=-1, help="do not modify!")
     parser.add_argument("--device", type=int, default=0, help="select the gpu device to train")
 
     # logging
+    parser.add_argument("--wandb", action="store_true", help="use wandb")
     parser.add_argument("--wandb_user", default='ducky', type=str)
     parser.add_argument("--wandb_project", default='feedback_deberta_large', type=str)
     parser.add_argument("--wandb_comment", default="", type=str, help="comment will be added at the back of wandb project name")
@@ -97,6 +98,14 @@ def get_config():
     parser.add_argument("--noise_injection", default=False, type=bool, help="use noise injection")
     parser.add_argument("--back_translation", default=False, type=bool, help="use back translation")
     parser.add_argument("--grammer_correction", default=False, type=bool, help="use grammer correction")
+
+    parser.add_argument("--word2vec", action="store_true", help="use word2vec")
+    parser.add_argument("--word2vec_prob", default=0.5, type=float, help="probability of using word2vec")
+    parser.add_argument("--swap_order", action="store_true", help="use swapping the word order")
+    parser.add_argument("--swap_order_prob", default=0.5, type=float, help="probability of using word2vec")
+
+    parser.add_argument("--save_cache", action="store_true", help="save cache if the cache is full")
+    parser.add_argument("--save_cache_dir", default="augmentation", type=str, help="directory to save cache")
 
     args = parser.parse_args()
 
@@ -151,8 +160,9 @@ if __name__ == "__main__":
     args = get_config()
 
     # wandb setting
-    wandb_run = wandb_setting(args)
-    wandb_run.name = f'debertav3_fold_lr{args.lr}_{args.wandb_comment}'
+    if args.wandb:
+        wandb_run = wandb_setting(args)
+        wandb_run.name = f'debertav3_fold_lr{args.lr}_{args.wandb_comment}'
 
     class_names = ['None',
                    'Lead',
@@ -178,10 +188,10 @@ if __name__ == "__main__":
 
     # loss
     # args.class_weight = torch.Tensor(token_weights).to(args.device).half()
-    args.criterion_list = ["custom_ce", "custom_rce"]
-    args.criterion_ratio = [args.ce_weight, args.rce_weight]
-    # args.criterion_list = ["custom_ce"]
-    # args.criterion_ratio = [1.]
+    # args.criterion_list = ["custom_ce", "custom_rce"]
+    # args.criterion_ratio = [args.ce_weight, args.rce_weight]
+    args.criterion_list = ["custom_ce"]
+    args.criterion_ratio = [1.]
     # args.criterion_list = ["dice"]
     # args.criterion_ratio = [1.]
     criterion = get_criterion(args)            

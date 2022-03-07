@@ -235,7 +235,6 @@ class Trainer():
             description = f"[ TRAIN ] epoch {epoch} lr {self.lr():.7f} loss: {torch.stack(losses).mean().item(): .4f}"
             pbar.set_description(description)
 
-
     
     def valid_one_epoch(self, epoch):
         self.model.eval()
@@ -331,12 +330,15 @@ class Trainer():
             print(f'Validation [ Clean ] {val_score_clean}')
             print(f'Validation [ Wonho ] {val_score_wonho}')
 
-            log_dict = init_match_dict(val_loss)
-            log_dict = make_match_dict(log_dict, self.class_names, 'Bug', (f1s_bug, rec_bug, prec_bug))
-            log_dict = make_match_dict(log_dict, self.class_names, 'Clean', (f1s_clean, rec_clean, prec_clean))
-            log_dict = make_match_dict(log_dict, self.class_names, 'Wonho', (f1s_wonho, rec_wonho, prec_wonho))
-            wandb.log(log_dict) 
+            # wandb - logging
+            if self.args.wandb:
+                log_dict = init_match_dict(val_loss)
+                log_dict = make_match_dict(log_dict, self.class_names, 'Bug', (f1s_bug, rec_bug, prec_bug))
+                log_dict = make_match_dict(log_dict, self.class_names, 'Clean', (f1s_clean, rec_clean, prec_clean))
+                log_dict = make_match_dict(log_dict, self.class_names, 'Wonho', (f1s_wonho, rec_wonho, prec_wonho))
+                wandb.log(log_dict) 
 
+            # saving model
             if val_score_bug > best_f1_bug:
                 best_f1_bug = val_score_bug
                 save_name = f"bug_debertav3_fold{str(self.args.val_fold)}_f1{best_f1_bug:.4f}.pth"
@@ -346,13 +348,13 @@ class Trainer():
             if val_score_clean > best_f1_clean:
                 best_f1_clean = val_score_clean
                 save_name = f"clean_debertav3_fold{str(self.args.val_fold)}_f1{best_f1_clean:.4f}.pth"
-                if best_f1_clean > 0.690:
+                if best_f1_clean > 0.68:
                     torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
                     print("[ Clean version ] saving model")
             if val_score_wonho > best_f1_wonho:
                 best_f1_wonho = val_score_wonho
                 save_name = f"wonho_debertav3_fold{str(self.args.val_fold)}_f1{best_f1_wonho:.4f}.pth"
-                if best_f1_wonho > 0.700:
+                if best_f1_wonho > 0.683:
                     torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
                     print("[ Wonho version ] saving model")
 
