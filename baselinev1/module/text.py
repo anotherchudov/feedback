@@ -74,13 +74,31 @@ class TextAugmenter:
                 you can manually set them in the code here
                 ==========================================================
                 - val_fold (int): the validation fold
+
                 - save_cache (bool): whether to save the cache
                 - save_cache_dir (str): the directory to save the cache
+
+                - text_aug_min_len (int): the minimum length of text to apply augmentation
+                    - we apply augmentation to the sentence stored in the text list
+                    - this length doesn't mean the whole text for 1 text_id
+                    - this length means a each piece of sentence divided in text list
+
                 - noise_injection (bool): whether to noise injection
                 - back_translation (bool): whether to back translation
                 - grammer_correction (bool): whether to grammer correction
                 - word2vec (bool): whether to word2vec
+                - synonym_replacement (bool): whether to synonym replacement
+                - random_deletion (bool): whether to random deletion
                 - swap_order (bool): whether to swap order
+                - random_insertion (bool): whether to random insertion
+
+                - word2vec_prob (float): probabiility to use word2vec
+                - synonym_replacement_prob (float): probabiility to use synonym replacement
+                - random_deletion_prob (float): probabiility to use random deletion
+                - swap_order_prob (float): probabiility to use swap order
+                - random_insertion_prob (float): probabiility to use random insertion
+
+                - random_deletion_ratio (float): ratio of sentence len to apply random deletion
                 ==========================================================
 
             text_ids (list): the list of text_id
@@ -144,7 +162,7 @@ class TextAugmenter:
         text_df = self.data_dict[text_id]['text_df']
 
         # 1. augmentation
-        text_list = self.text_augmentation(text_id, text_list)
+        text_list = self.text_augmentation(text_id, text_list, cache=False)
 
         # 2. convert list to text
         # TODO: Automatically set the `revise_df` depends on the args setting
@@ -203,7 +221,7 @@ class TextAugmenter:
                         save_path = osp.join(self.args.save_cache_dir, save_name)
                         self.save_cache(self.__dict__[_var], save_path)
 
-    def text_augmentation(self, text_id, text_list):
+    def text_augmentation(self, text_id, text_list, cache=False):
         """Text Augmentation
         
         - noise injection
@@ -219,15 +237,27 @@ class TextAugmenter:
         Args:
             text_id (str): the text id for cache
             text_list (list): the text list
+            cache (bool): whether to cache the result
         
         Returns:
             text_list (list): the text list
         """
+        # cache to save all the augmentation applied results
+        if cache:
+            if text_id in self.text_augmentation_cache:
+                return self.text_augmentation_cache[text_id]
+                
         # TODO: Automatically set the `cache` depends on the args setting
         text_list = self.noise_injection(text_id, text_list, cache=False) if self.args.noise_injection else text_list
         text_list = self.back_translation(text_id, text_list, cache=False) if self.args.back_translation else text_list
         text_list = self.grammer_correction(text_id, text_list, cache=False) if self.args.grammer_correction else text_list
-        text_list = self.text_augmentationv1(text_id, text_list, cache=True)
+        text_list = self.word2vec_sentence_replacement(text_id, text_list, cache=True) if self.args.word2vec else text_list
+
+        # light-weight augmentation
+        text_list = self.easy_data_augmentation(text_id, text_list)
+
+        if cache:
+            self.text_augmentation_cache[text_id] = text_list
 
         return text_list
 
@@ -303,15 +333,14 @@ class TextAugmenter:
 
         return text_list
 
-    def text_augmentationv1(self, text_id, text_list, cache=False):
+
+    def word2vec_sentence_replacement(self, text_id, text_list, cache=False):
         """Text Augmentation
         
-        - text augmentation
-            - TextAugment (MIT License) https://github.com/dsfsi/textaugment
-                1. Word2Vec replacing sentence
-                    - gensim with pre-trained word2vec Google News model
-                    - replacing sentence with similiar word
-                2. random swaping word's order
+        - TextAugment (MIT License) https://github.com/dsfsi/textaugment
+            - Word2Vec replacing sentence
+                - gensim with pre-trained word2vec Google News model
+                - replacing sentence with similiar word
         
         Args:
             text_id (str): the text id for cache
@@ -322,22 +351,65 @@ class TextAugmenter:
             text_list (list): the text list
         """
         if cache:
-            if text_id in self.text_augmentationv1_cache:
-                return self.text_augmentationv1_cache[text_id]
+            if text_id in self.word2vec_cache:
+                return self.word2vec_cache[text_id]
         
         for i, text in enumerate(text_list):
             # replacing sentence with similiar word
             if self.args.word2vec and random.random() < self.args.word2vec_prob:
+                print(f'before {text[1]}')
+                if len(text[1]) <= self.args.text_aug_min_len:
+                    print(f'[ IGNORED ] {text[1]}')
+                    continue
                 text_list[i][1] = self.word2vec_model.augment(text[1])
+                print(f'after {text[1]}')
+
+        if cache:
+            self.word2vec_cache[text_id] = text_list
+            
+        return text_list
+        
+
+    def easy_data_augmentation(self, text_id, text_list):
+        """EDA (Easy Data Augmentation) supports 4 types of data augmentation
+        
+        - TextAugment (MIT License) https://github.com/dsfsi/textaugment
+            - Randomly replacing words to synonyms
+            - Randomly removing words from the sentence
+            - Randomly swapping word's order
+            - Randomly inserting words from the sentence
+        
+        Args:
+            text_id (str): the text id for cache
+            text_list (list): the text list
+        
+        Returns:
+            text_list (list): the text list
+        """
+        for i, text in enumerate(text_list):
+            # print('before', text[1])
+            if len(text[1]) <= self.args.text_aug_min_len:
+                continue
+
+            # randomly replacing words to synonyms
+            if self.args.synonym_replacement and random.random() < self.args.synonym_replacement_prob:
+                text_list[i][1] = self.eda_model.synonym_replacement(text[1])
+
+            # randomly removing words from the sentence
+            if self.args.random_deletion and random.random() < self.args.random_deletion_prob:
+                text_list[i][1] = self.eda_model.random_deletion(text[1], p=self.args.random_deletion_ratio)
 
             # swaping the random words inside the sentence
             if self.args.swap_order and random.random() < self.args.swap_order_prob:
-                text_list[i][1] = self.swap_model.augment(text[1])
+                text_list[i][1] = self.eda_model.random_swap(text[1])
 
-        if cache:
-            self.text_augmentationv1_cache[text_id] = text_list
-            
+            # randomly inserting words to the sentence
+            if self.args.random_insertion and random.random() < self.args.random_insertion_prob:
+                text_list[i][1] = self.eda_model.random_insertion(text[1])
+            # print('after', text[1])
+
         return text_list
+
 
     def save_cache(self, cache, save_path):
         """Save the cache
@@ -368,6 +440,7 @@ class TextAugmenter:
 
         return cache
 
+
     def initialize_helper(self):
         """Initialize Helper """
         self.colors = {
@@ -390,11 +463,14 @@ class TextAugmenter:
         self.label_cache = {}
         self.discourse_boundary_cache = {}
 
+        # save the whole augmentation applied text
+        self.text_augmentation_cache = {}
+
         # TODO: Whatever cache you want - backtranslation, noise injection, etc.
         self.noise_injection_cache = {}
         self.back_translation_cache = {}
         self.grammer_correction_cache = {}
-        self.text_augmentationv1_cache = {}
+        self.word2vec_cache = {}
 
         # flag to check if the cached have been saved
         # if args.save_cache is False, then the cache will not be saved
@@ -409,10 +485,11 @@ class TextAugmenter:
             if self.verbose:
                 print('[ Text Augmenter ] Word2Vec for sentence replacement')
 
-        if self.args.swap_order:
-            self.swap_model = EDA()
-            if self.verbose:
-                print('[ Text Augmenter ] swapping the order of words in a sentence')
+        # used for 4 types of augmentation
+        # synonym replacement, random deletion, swap words order, and random insertion
+        self.eda_model = EDA()
+        if self.verbose:
+            print('[ Text Augmenter ] EDA - Easy Data Augmentation model')
 
     def initialize_tokenizer(self, args, max_len=2048):
         """Initialize the tokenizer

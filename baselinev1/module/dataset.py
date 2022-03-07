@@ -42,7 +42,7 @@ class OnlineTrainDataset(torch.utils.data.Dataset):
         text_id = self.text_ids[idx]
 
         # load train data
-        label = self.text_augmenter.get_label(text_id, cache=False)  
+        label = self.text_augmenter.get_label(text_id, cache=True)  
         tokens, token_labels, attention_mask, num_tokens = label
 
         # label smoothing

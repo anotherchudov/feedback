@@ -95,14 +95,25 @@ def get_config():
 
     # online dataset
     parser.add_argument("--online_dataset", action="store_true", help="use dataset that directly preprocess text online")
-    parser.add_argument("--noise_injection", default=False, type=bool, help="use noise injection")
-    parser.add_argument("--back_translation", default=False, type=bool, help="use back translation")
-    parser.add_argument("--grammer_correction", default=False, type=bool, help="use grammer correction")
+
+    parser.add_argument("--text_aug_min_len", default=15, type=int, help="to apply augmentation, the length of sentence must be larger than this value")
+    parser.add_argument("--noise_injection", action="store_true", help="use noise injection")
+    parser.add_argument("--back_translation", action="store_true", help="use back translation")
+    parser.add_argument("--grammer_correction", action="store_true", help="use grammer correction")
 
     parser.add_argument("--word2vec", action="store_true", help="use word2vec")
     parser.add_argument("--word2vec_prob", default=0.5, type=float, help="probability of using word2vec")
+
+    parser.add_argument("--synonym_replacement", action="store_true", help="use synonym replacement")
+    parser.add_argument("--synonym_replacement_prob", default=0.5, type=float, help="probability of using synonym replacement")
+    parser.add_argument("--random_deletion", action="store_true", help="use random deletion")
+    parser.add_argument("--random_deletion_prob", default=0.5, type=float, help="probability of using random deletion")
+    parser.add_argument("--random_deletion_ratio", default=0.1, type=float, help="ratio of random deleting sentence")
+
     parser.add_argument("--swap_order", action="store_true", help="use swapping the word order")
     parser.add_argument("--swap_order_prob", default=0.5, type=float, help="probability of using word2vec")
+    parser.add_argument("--random_insertion", action="store_true", help="use random insertion")
+    parser.add_argument("--random_insertion_prob", default=0.5, type=float, help="probability of using random insertion")
 
     parser.add_argument("--save_cache", action="store_true", help="save cache if the cache is full")
     parser.add_argument("--save_cache_dir", default="augmentation", type=str, help="directory to save cache")
