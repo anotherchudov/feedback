@@ -7,6 +7,7 @@ from torch.optim import AdamW
 from adamp import AdamP
 
 from transformers.optimization import Adafactor
+import torch_optimizer as optim
 
 
 class SAM(torch.optim.Optimizer):
@@ -84,11 +85,36 @@ def get_optimizer(args, model):
                         momentum=args.momentum,
                         weight_decay=args.weight_decay,
                         nesterov=args.nesterov)
+    elif args.optimizer == 'lamb':
+        optimizer = optim.Lamb(
+            model.parameters(),
+            lr=args.lr,
+            betas=(0.9, 0.999),
+            eps=1e-8,
+            weight_decay=args.weight_decay,
+        )
+    elif args.optimizer == 'lookahead':
+        yogi = optim.Yogi(
+            model.parameters(),
+            lr=args.lr,
+            betas=(0.9, 0.999),
+            eps=1e-3,
+            initial_accumulator=1e-6,
+            weight_decay=args.weight_decay,
+        )
+        optimizer = optim.Lookahead(yogi, k=5, alpha=0.5)
     elif args.optimizer == 'adam':
         optimizer = Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     elif args.optimizer == 'adamp':
         optimizer = AdamP(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-
+    elif args.optimizer == 'radam':
+        optimizer = optim.RAdam(
+            model.parameters(),
+            lr=args.lr,
+            betas=(0.9, 0.999),
+            eps=1e-8,
+            weight_decay=args.weight_decay,
+        )
     elif args.optimizer == 'adamw':
         weights = []
         biases = []
@@ -103,6 +129,38 @@ def get_optimizer(args, model):
         optimizer = AdamW([{'params': weights, 'weight_decay': args.weight_decay, 'lr': args.lr},
                            {'params': biases, 'weight_decay': 0 if not args.decay_bias else args.weight_decay, 'lr': args.lr}])
                            
+    elif args.optimizer == 'adabound':
+        optimizer = optim.AdaBound(
+            model.parameters(),
+            lr=args.lr,
+            betas= (0.9, 0.999),
+            final_lr=args.lr*100, # final SGD learning rate
+            gamma=1e-3,
+            eps=1e-8,
+            weight_decay=args.weight_decay,
+            amsbound=False,
+        )
+    elif args.optimizer == 'adabelief':
+        optimizer = optim.AdaBelief(
+            model.parameters(),
+            lr=args.lr,
+            betas=(0.9, 0.999),
+            eps=1e-3,
+            weight_decay=args.weight_decay,
+            amsgrad=False,
+            weight_decouple=False,
+            fixed_decay=False,
+            rectify=False,
+        )
+    elif args.optimizer == 'adahessian':
+        optimizer = optim.Adahessian(
+            model.parameters(),
+            lr=args.lr*10,
+            betas= (0.9, 0.999),
+            eps=1e-4,
+            weight_decay=args.weight_decay,
+            hessian_power=1.0,
+        )
     elif args.optimizer == 'adafactor':
         optimizer = Adafactor(
             model.parameters(),
@@ -115,6 +173,50 @@ def get_optimizer(args, model):
             relative_step=False,
             scale_parameter=False,
             warmup_init=False,
+        )
+    elif args.optimizer == 'diffgrad':
+        optimizer = optim.DiffGrad(
+            model.parameters(),
+            lr=args.lr,
+            betas=(0.9, 0.999),
+            eps=1e-8,
+            weight_decay=args.weight_decay,
+        )
+    elif args.optimizer == 'qhadam':
+        optimizer = optim.QHAdam(
+            model.parameters(),
+            lr=args.lr,
+            betas=(0.9, 0.999),
+            nus=(1.0, 1.0),
+            weight_decay=args.weight_decay,
+            decouple_weight_decay=False,
+            eps=1e-8,
+        )
+    elif args.optimizer == 'qhm':
+        optimizer = optim.QHM(
+            model.parameters(),
+            lr=args.lr,
+            momentum=0,
+            nu=0.7,
+            weight_decay=1e-2,
+            weight_decay_type='grad',
+        )
+    elif args.optimizer == 'yogi':
+        optimizer = optim.Yogi(
+            model.parameters(),
+            lr=args.lr,
+            betas=(0.9, 0.999),
+            eps=1e-3,
+            initial_accumulator=1e-6,
+            weight_decay=args.weight_decay,
+        )
+    elif args.optimizer == 'madgrad':
+        optimizer = optim.MADGRAD(
+            model.parameters(),
+            lr=args.lr,
+            momentum=0.9,
+            weight_decay=args.weight_decay,
+            eps=1e-6,
         )
     elif args.optimizer == 'sam':
         """Sharpness-Aware Minimization for Efficiently Improving Generalization

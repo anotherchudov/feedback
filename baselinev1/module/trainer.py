@@ -193,8 +193,9 @@ class Trainer():
                     loss = self.criterion(outs, label, class_weight=class_weight) / self.args.grad_acc_steps
 
                 # loss
-                scaler.scale(loss).backward()
-                losses.append(loss.detach())
+                create_graph = True if self.args.optimizer == 'adahessian' else False
+                scaler.scale(loss).backward(create_graph=create_graph)
+                losses.append(loss.item())
             
                 # optimizer
                 if (step + 1) % self.args.grad_acc_steps == 0:
@@ -232,7 +233,7 @@ class Trainer():
                     ...
                     # print(f'Epoch: {epoch} | Step: {step + 1} | Train Acc per class: {train_acc_per_class}')
             
-            description = f"[ TRAIN ] epoch {epoch} lr {self.lr():.7f} loss: {torch.stack(losses).mean().item(): .4f}"
+            description = f"[ TRAIN ] epoch {epoch} lr {self.lr():.7f} loss: {np.array(losses).mean(): .4f}"
             pbar.set_description(description)
 
     

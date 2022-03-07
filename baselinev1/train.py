@@ -69,6 +69,7 @@ def get_config():
     parser.add_argument("--print_f1_per_step", default=500, type=int, help="print f1 of each class every `print_acc` steps")
 
     # optimizer
+    parser.add_argument("--optimizer", default="adahessian", type=str)
     parser.add_argument("--label_smoothing", default=0.1, type=float)
     parser.add_argument("--rce_weight", default=0.1, type=float)
     parser.add_argument("--ce_weight", default=0.9, type=float)
@@ -213,7 +214,8 @@ if __name__ == "__main__":
     model = get_model(args)
 
     # optimizer
-    args.optimizer = "adamw"
+    # args.optimizer = "adahessian"
+    args.optimizer = "diffgrad"
     # args.optimizer = "adafactor"
     # args.optimizer = "sam"
     # args.optimizer = "adamp"

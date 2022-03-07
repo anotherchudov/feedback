@@ -387,8 +387,7 @@ class TextAugmenter:
             text_list (list): the text list
         """
         for i, text in enumerate(text_list):
-            # print('before', text[1])
-            if len(text[1]) <= self.args.text_aug_min_len:
+            if len(text[1].strip()) <= self.args.text_aug_min_len:
                 continue
 
             # randomly replacing words to synonyms
@@ -406,7 +405,6 @@ class TextAugmenter:
             # randomly inserting words to the sentence
             if self.args.random_insertion and random.random() < self.args.random_insertion_prob:
                 text_list[i][1] = self.eda_model.random_insertion(text[1])
-            # print('after', text[1])
 
         return text_list
 
