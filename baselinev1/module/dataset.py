@@ -63,6 +63,68 @@ class OnlineTrainDataset(torch.utils.data.Dataset):
 
         return tokens, attention_mask, token_labels, class_weight, num_tokens
 
+
+class OnlineValidDataset(torch.utils.data.Dataset):
+    def __init__(self, args, text_ids, all_texts, df, class_names, token_weights):
+        self.args = args
+        self.all_texts = all_texts
+        self.text_ids = text_ids
+        self.df = df
+
+        self.class_names = class_names
+        self.token_weights = token_weights
+
+        self.text_augmenter = TextAugmenter(args, text_ids, all_texts, df, valid=True)
+
+    def __len__(self):
+        return len(self.text_ids)
+
+    def __getitem__(self, idx):
+        text_id = self.text_ids[idx]
+        text = self.all_texts[text_id]
+
+        # load valid data
+        sample_df, label = self.text_augmenter.get_label(text_id, cache=False)  
+        tokens, token_labels, attention_mask, token_offset, num_tokens = label
+
+        # load ground truth prediction string for f1macro metric
+        gt_dict = {}
+        for class_i in range(1, 8):
+            class_name = self.class_names[class_i]
+            class_df = sample_df.query('discourse_type == @class_name')   
+            if len(class_df):
+                gt_dict[class_i] = [(x[0], x[1]) for x in class_df.predictionstring.map(split_predstring)]
+
+        # class weight per token
+        class_weight = np.zeros_like(attention_mask)
+        argmax_labels = token_labels.argmax(-1)
+
+        for class_i in range(1, 15):
+            class_weight[argmax_labels == class_i] = self.token_weights[class_i]
+
+        class_none_index = argmax_labels == 0
+        class_none_index[num_tokens - 1:] = False
+        class_weight[class_none_index] = self.token_weights[0]
+        class_weight[0] = 0
+        
+        # calculate index map
+        # I'm quarking on the kaggle QUARK!!!
+        # 00001111111112223333444444455555555
+        index_map = []
+        current_word = 0
+        blank = False
+        for char_ix in range(text.index(text.strip()[0]), len(text)):
+            if text[char_ix] in [' ', '\n']:
+                blank = True
+            elif blank:
+                current_word += 1
+                blank = False
+            index_map.append(current_word)
+        
+        return tokens, attention_mask, token_labels, class_weight, token_offset, gt_dict, index_map, num_tokens
+
+
+
 class TrainDataset(torch.utils.data.Dataset):
     def __init__(self, ids, data, label_smoothing, token_weights, data_prefix):
         self.ids = ids
@@ -149,7 +211,9 @@ class ValDataset(torch.utils.data.Dataset):
         class_weight[class_none_index] = self.token_weights[0]
         class_weight[0] = 0
         
-        # ???
+        # calculate index map
+        # I'm quarking on the kaggle QUARK!!!
+        # 00001111111112223333444444455555555
         index_map = []
         current_word = 0
         blank = False
@@ -182,11 +246,12 @@ def val_collate_fn(ins):
 def get_dataloader(args, train_ids, val_ids, data, csv, all_texts, train_text_ids, val_text_ids, class_names, token_weights):
     if args.online_dataset:
         train_dataset = OnlineTrainDataset(args, train_text_ids, all_texts, csv, args.label_smoothing, token_weights)
+        val_dataset = OnlineValidDataset(args, val_text_ids, all_texts, csv, class_names, token_weights)
     else:
         train_dataset = TrainDataset(train_ids, data, args.label_smoothing, token_weights, args.data_prefix)
-    val_dataset = ValDataset(val_ids, data, csv, all_texts, val_text_ids, class_names, token_weights)
+        val_dataset = ValDataset(val_ids, data, csv, all_texts, val_text_ids, class_names, token_weights)
 
     train_dataloader = DataLoader(train_dataset, collate_fn=train_collate_fn, batch_size=args.batch_size, num_workers=args.num_worker, shuffle=True)
-    val_dataloader = DataLoader(val_dataset, collate_fn=val_collate_fn, batch_size=args.batch_size, num_workers=8, persistent_workers=True)
+    val_dataloader = DataLoader(val_dataset, collate_fn=val_collate_fn, batch_size=args.batch_size, num_workers=args.num_worker)
 
     return train_dataloader, val_dataloader

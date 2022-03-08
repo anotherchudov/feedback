@@ -58,7 +58,7 @@ class TextAugmenter:
         5. calculate the label by using `entity boundary` and `offset` 
     
     """
-    def __init__(self, args, text_ids, all_texts, df, verbose=True):
+    def __init__(self, args, text_ids, all_texts, df, valid=False, verbose=True):
         """Initialize the Text Augmenter
         
         1. text is preprocessed (text -> list)
@@ -124,6 +124,7 @@ class TextAugmenter:
         self.text_ids = text_ids
         self.all_texts = all_texts
         self.df = df
+        self.valid = valid
 
         # used for cache saving
         self.total_text_n = len(self.text_ids)
@@ -166,7 +167,8 @@ class TextAugmenter:
         text_df = self.data_dict[text_id]['text_df']
 
         # 1. augmentation
-        text_list = self.text_augmentation(text_id, text_list, cache=False)
+        if not self.valid:
+            text_list = self.text_augmentation(text_id, text_list, cache=False)
 
         # 2. convert list to text
         # TODO: Automatically set the `revise_df` depends on the args setting
@@ -204,7 +206,10 @@ class TextAugmenter:
         if not self.cache_saved:
             self.check_cache_and_save()
 
-        return label
+        if self.valid:
+            return text_df, label
+        else:
+            return label
 
     def check_cache_and_save(self):
         """Check the cache and save the cache to file"""
@@ -285,8 +290,6 @@ class TextAugmenter:
                 text = text[1]
                 if len(text.strip()) <= self.args.text_aug_min_len:
                     continue
-
-                # TODO: newline ('\n') adding
 
                 # choose the noise character and the location to replace the char
                 # noise character is a-z & space(' ')
@@ -370,12 +373,10 @@ class TextAugmenter:
         for i, text in enumerate(text_list):
             # replacing sentence with similiar word
             if self.args.word2vec and random.random() < self.args.word2vec_prob:
-                print(f'before {text[1]}')
-                if len(text[1]) <= self.args.text_aug_min_len:
-                    print(f'[ IGNORED ] {text[1]}')
+                if len(text[1].strip()) <= self.args.text_aug_min_len:
                     continue
+
                 text_list[i][1] = self.word2vec_model.augment(text[1])
-                print(f'after {text[1]}')
 
         if cache:
             self.word2vec_cache[text_id] = text_list
@@ -474,13 +475,14 @@ class TextAugmenter:
         self.label_cache = {}
         self.discourse_boundary_cache = {}
 
-        # save the whole augmentation applied text
-        self.text_augmentation_cache = {}
+        if not self.valid:
+            # save the whole augmentation applied text
+            self.text_augmentation_cache = {}
 
-        # TODO: Whatever cache you want - backtranslation, noise injection, etc.
-        self.back_translation_cache = {}
-        self.grammer_correction_cache = {}
-        self.word2vec_cache = {}
+            # TODO: Whatever cache you want - backtranslation, noise injection, etc.
+            self.back_translation_cache = {}
+            self.grammer_correction_cache = {}
+            self.word2vec_cache = {}
 
         # flag to check if the cached have been saved
         # if args.save_cache is False, then the cache will not be saved
@@ -547,7 +549,7 @@ class TextAugmenter:
                               }
         """
         if self.verbose:
-            print('[ Text Augmenter ] Initializing data...')
+            print(f'[ Text Augmenter ] Initializing {"Valid" if self.valid else "Train"} data')
 
         df = df.copy()
 
@@ -719,14 +721,17 @@ class TextAugmenter:
 
         if revise:
             text, discourse_boundary = self.recalculate_entity_boundary(text, text_df)
+            if cache:
+                self.discourse_boundary_cache[text_id] = (text, discourse_boundary)
+
+            return text, discourse_boundary
         else:
             discourse_boundary = text_df[['discourse_start', 'discourse_end', 'discourse_type']].values
+            if cache:
+                self.discourse_boundary_cache[text_id] = discourse_boundary
 
-        # store the result to cache
-        if cache:
-            self.discourse_boundary_cache[text_id] = discourse_boundary
+            return discourse_boundary
         
-        return text, discourse_boundary
 
     def recalculate_entity_boundary(self, text, text_df):
         """recalculate the entity boundary
@@ -875,78 +880,11 @@ class TextAugmenter:
         token_labels[:token_len] = targets
         attention_mask[:token_len] = tokenizer_outs['attention_mask']
 
-        label = (tokens, token_labels, attention_mask, token_len)
+        if self.valid:
+            token_offset = np.zeros((max_len, 2), dtype='i4')
+            token_offset[:token_len] = np.vstack(tokenizer_outs['offset_mapping']).astype('i4')
+            label = (tokens, token_labels, attention_mask, token_offset, token_len)
+        else:
+            label = (tokens, token_labels, attention_mask, token_len)
 
         return label
-
-    # def token_labeling(self, text, tokenizer_outs, ent_boundaries, cat2id, max_len=2048):
-    #     """label the tokens
-    #     Author - sergei chudov
-
-    #     Args:
-    #         text (str): literally the text of each text_id
-    #         tokenizer_outs (list): list of tokenizer outputs
-    #         ent_boundaries (list): list of entity boundaries
-    #         cat2id (dict): dictionary that maps the category to id
-    #         max_len (int): max length of the text
-    #     Returns:
-    #         label (tuple): label consisted with 3 types of data
-    #                         - tokens (max_len)
-    #                         - token labels (max_len, num_labels)
-    #                         - attention mask (max_len)
-    #                         - number of tokens (1)
-    #     """
-    #     all_boundaries = [(z, x[-1], t) for x in ent_boundaries for z, t in zip(x[:2], ('start', 'end'))]
-                
-    #     token_len = len(tokenizer_outs['input_ids'])
-    #     current_target = 0
-
-    #     targets = np.zeros(token_len, dtype='i8')
-    #     for token_ix in range(token_len):
-    #         token_start_ix, token_end_ix = tokenizer_outs['offset_mapping'][token_ix]
-    #         if token_end_ix != 0 and (all_boundaries[0][2] == 'end' and token_end_ix >= all_boundaries[0][0])\
-    #                             or (all_boundaries[0][2] == 'start' and token_end_ix > all_boundaries[0][0]):
-
-    #             if all_boundaries[0][2] == 'start':
-    #                 current_target = cat2id[all_boundaries[0][1]]
-    #                 targets[token_ix] = current_target
-    #                 if token_end_ix == all_boundaries[1][0]:
-    #                     current_target = 0
-    #                     all_boundaries.pop(0)
-    #                 else:
-    #                     current_target += 1
-    #             else:
-    #                 if len(all_boundaries) > 1 and token_end_ix > all_boundaries[1][0]:
-    #                     if token_start_ix >= all_boundaries[1][0]:
-    #                         assert text[all_boundaries[0][0] - 1] == '¨'
-    #                     all_boundaries.pop(0)
-    #                     current_target = cat2id[all_boundaries[0][1]]
-    #                     targets[token_ix] = current_target
-    #                     current_target += 1
-
-    #                 else:
-    #                     if token_start_ix >= all_boundaries[0][0]:
-    #                         current_target = 0
-    #                     targets[token_ix] = current_target
-    #                     current_target = 0
-    #             all_boundaries.pop(0)
-    #             if not all_boundaries:
-    #                 break
-    #         else:
-    #             targets[token_ix] = current_target
-
-    #     # one-hot encoding
-    #     targets = self.make_one_hot(targets, 15)
-
-    #     # Generate label
-    #     tokens = np.zeros(max_len, dtype='i8')
-    #     token_labels = np.zeros((max_len, 15), dtype='f4')
-    #     attention_mask = np.zeros(max_len, dtype='f4')
-
-    #     tokens[:token_len] = tokenizer_outs['input_ids']
-    #     token_labels[:token_len] = targets
-    #     attention_mask[:token_len] = tokenizer_outs['attention_mask']
-
-    #     label = (tokens, token_labels, attention_mask, token_len)
-
-    #     return label
