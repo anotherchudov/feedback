@@ -4,6 +4,7 @@ import torch
 from torch.optim import SGD
 from torch.optim import Adam
 from torch.optim import AdamW
+# from torch.optim import RAdam
 from adamp import AdamP
 
 from transformers.optimization import Adafactor
@@ -106,7 +107,16 @@ def get_optimizer(args, model):
     elif args.optimizer == 'adam':
         optimizer = Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     elif args.optimizer == 'adamp':
-        optimizer = AdamP(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        # optimizer = AdamP(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        optimizer = optim.AdamP(
+            model.parameters(),
+            lr=args.lr,
+            betas=(0.9, 0.999),
+            eps=1e-8,
+            weight_decay=args.weight_decay,
+            delta=0.1,
+            wd_ratio=0.1
+        )
     elif args.optimizer == 'radam':
         optimizer = optim.RAdam(
             model.parameters(),

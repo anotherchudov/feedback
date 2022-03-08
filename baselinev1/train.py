@@ -102,6 +102,7 @@ def get_config():
     parser.add_argument("--back_translation", action="store_true", help="use back translation")
     parser.add_argument("--grammer_correction", action="store_true", help="use grammer correction")
 
+    parser.add_argument("--noise_injection_prob", default=0.5, type=float, help="probability of noise injection")
     parser.add_argument("--word2vec", action="store_true", help="use word2vec")
     parser.add_argument("--word2vec_prob", default=0.5, type=float, help="probability of using word2vec")
 
@@ -215,7 +216,7 @@ if __name__ == "__main__":
 
     # optimizer
     # args.optimizer = "adahessian"
-    args.optimizer = "diffgrad"
+    # args.optimizer = "diffgrad"
     # args.optimizer = "adafactor"
     # args.optimizer = "sam"
     # args.optimizer = "adamp"

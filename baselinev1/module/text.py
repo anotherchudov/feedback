@@ -69,6 +69,9 @@ class TextAugmenter:
          
         Args:
             args (argparse.Namespace): the arguments
+                TODO: further when no args are passed while initialization
+                the default values will be automatically setted by default
+                TODO: also it will be possible to change the default values
 
                 Following arguments are used in here!
                 you can manually set them in the code here
@@ -92,6 +95,7 @@ class TextAugmenter:
                 - swap_order (bool): whether to swap order
                 - random_insertion (bool): whether to random insertion
 
+                - noise_injection_prob (float): the probability of noise injection
                 - word2vec_prob (float): probabiility to use word2vec
                 - synonym_replacement_prob (float): probabiility to use synonym replacement
                 - random_deletion_prob (float): probabiility to use random deletion
@@ -166,7 +170,7 @@ class TextAugmenter:
 
         # 2. convert list to text
         # TODO: Automatically set the `revise_df` depends on the args setting
-        # revise_df = True adds around 3 minutes for 1 epoch
+        # revise_df = True adds around 1 minutes for 1 epoch
         text, text_df = self.list2text(text_list, text_df, revise_df=True)
         
         # 3. get the discourse boundary - text_id is used for cache
@@ -248,7 +252,7 @@ class TextAugmenter:
                 return self.text_augmentation_cache[text_id]
                 
         # TODO: Automatically set the `cache` depends on the args setting
-        text_list = self.noise_injection(text_id, text_list, cache=False) if self.args.noise_injection else text_list
+        text_list = self.noise_injection(text_id, text_list) if self.args.noise_injection else text_list
         text_list = self.back_translation(text_id, text_list, cache=False) if self.args.back_translation else text_list
         text_list = self.grammer_correction(text_id, text_list, cache=False) if self.args.grammer_correction else text_list
         text_list = self.word2vec_sentence_replacement(text_id, text_list, cache=True) if self.args.word2vec else text_list
@@ -261,7 +265,7 @@ class TextAugmenter:
 
         return text_list
 
-    def noise_injection(self, text_id, text_list, cache=False):
+    def noise_injection(self, text_id, text_list):
         """Noise Injection
         
         - char replacement
@@ -270,19 +274,28 @@ class TextAugmenter:
         Args:
             text_id (str): the text id for cache
             text_list (list): the text list
-            cache (bool): whether to use cache
         
         Returns:
             text_list (list): the text list
         """
-        raise NotImplementedError
+        for i, text in enumerate(text_list):
+            # randomly change one char or remove the char
+            if random.random() < self.args.noise_injection_prob:
 
-        if cache:
-            if text_id in self.noise_cache:
-                return self.noise_cache[text_id]
+                text = text[1]
+                if len(text.strip()) <= self.args.text_aug_min_len:
+                    continue
 
-        if cache:
-            self.noise_cache[text_id] = text_list
+                # TODO: newline ('\n') adding
+
+                # choose the noise character and the location to replace the char
+                # noise character is a-z & space(' ')
+                noise_chars = 'abcdefghijklmnopqrstuvwxyz '
+                # noise_chars = '\n'
+                noise_char = random.choice(noise_chars)
+                noise_i = random.randint(0, len(text) - 1)
+                text_list[i][1] = text[0:noise_i] + noise_char + text[noise_i + 1:]
+
         return text_list
 
     def back_translation(self, text_id, text_list, cache=False):
@@ -465,7 +478,6 @@ class TextAugmenter:
         self.text_augmentation_cache = {}
 
         # TODO: Whatever cache you want - backtranslation, noise injection, etc.
-        self.noise_injection_cache = {}
         self.back_translation_cache = {}
         self.grammer_correction_cache = {}
         self.word2vec_cache = {}

@@ -186,15 +186,14 @@ class Trainer():
             """
             if self.args.optimizer == 'sam':
                 outs = self.process_sam(tokens, mask, label, class_weight, scaler, losses)
-            else:
+            elif False:
                 with autocast():
                     outs = self.model(tokens, mask)
                     # loss = self.criterion(outs, label, class_weight=class_weight)
                     loss = self.criterion(outs, label, class_weight=class_weight) / self.args.grad_acc_steps
 
                 # loss
-                create_graph = True if self.args.optimizer == 'adahessian' else False
-                scaler.scale(loss).backward(create_graph=create_graph)
+                scaler.scale(loss).backward()
                 losses.append(loss.item())
             
                 # optimizer
@@ -205,6 +204,14 @@ class Trainer():
 
                     scaler.step(self.optimizer)
                     scaler.update()
+
+            else:
+                outs = self.model(tokens, mask)
+                loss = self.criterion(outs, label, class_weight=class_weight)
+                loss.backward()
+                self.optimizer.step()
+                losses.append(loss.item())
+
 
             # SWA - stochastic weight averaging
             """swa scheduler is disabled"""
@@ -262,9 +269,11 @@ class Trainer():
             with torch.no_grad():
                 tokens, mask, label, class_weight = (x.to(self.args.device) for x in (tokens, mask, labels, labels_mask))
 
-                with autocast():
-                    outs = self.val_model(tokens, mask)
-                    loss = self.criterion(outs, label, class_weight=class_weight)
+                # with autocast():
+                #     outs = self.val_model(tokens, mask)
+                #     loss = self.criterion(outs, label, class_weight=class_weight)
+                outs = self.val_model(tokens, mask)
+                loss = self.criterion(outs, label, class_weight=class_weight)
 
                 losses.append(loss)
 
