@@ -9,6 +9,14 @@ import torch
 from torch.cuda.amp import autocast, GradScaler
 from torch.optim.swa_utils import AveragedModel, SWALR
 
+from module.utils import get_data_files
+from module.dataset import get_augmenter
+from module.dataset import get_dataloader
+
+from model.model import get_model
+from module.optimizer import get_optimizer
+from module.scheduler import get_scheduler
+from module.loss import get_criterion
 
 from .metric import calc_acc, process_sample, init_match_dict, make_match_dict
 
@@ -24,22 +32,68 @@ class OptState(Enum):
 # ---------------------------------------------------------------
 
 class Trainer():
-    def __init__(self, args, model, train_loader, valid_loader, scheduler, optimizer, criterion, class_names):
+    def __init__(self, args, class_names):
         self.args = args
-        self.model = model
-        self.train_loader = train_loader
-        self.valid_loader = valid_loader
-        self.scheduler = scheduler
-        self.optimizer = optimizer
-        self.criterion = criterion
         self.class_names = class_names
+
+        # load data
+        if self.args.online_dataset:
+            self.train_augmenter, self.val_augmenter = get_augmenter(self.args)
+            self.train_loader, self.valid_loader = self.get_online_dataloader()
+        else:
+            self.train_loader, self.valid_loader = self.get_offline_dataloader()
+
+        self.args.steps_per_epoch = len(self.train_loader)
+
+        # -
+        self.model = get_model(args)
+        self.optimizer = get_optimizer(args, self.model)
+        self.scheduler = get_scheduler(args, self.optimizer)
+        self.criterion = get_criterion(args)            
 
         if self.args.swa:
             self.set_swa()
 
-        # swa will run the scheduler so disable it
+        # when swa run the own scheduler flag will be set as False
         self.run_scheduler = True
         self.val_model = self.model
+
+    def get_offline_dataloader(self):
+        all_texts, token_weights, data, csv, train_ids, val_ids, train_text_ids, val_text_ids = get_data_files(self.args)
+        train_dataloader, val_dataloader = get_dataloader(
+            self.args,
+            train_ids,
+            val_ids,
+            data,
+            csv,
+            all_texts,
+            train_text_ids,
+            val_text_ids,
+            self.class_names,
+            token_weights,
+        )
+
+        return train_dataloader, val_dataloader
+
+    def get_online_dataloader(self):
+        all_texts, token_weights, data, csv, train_ids, val_ids, train_text_ids, val_text_ids = get_data_files(self.args)
+        train_dataloader, val_dataloader = get_dataloader(
+            self.args,
+            train_ids,
+            val_ids,
+            data,
+            csv,
+            all_texts,
+            train_text_ids,
+            val_text_ids,
+            self.class_names,
+            token_weights,
+            train_augmenter=self.train_augmenter,
+            valid_augmenter=self.val_augmenter
+        )
+
+        return train_dataloader, val_dataloader
+
     
     def set_swa(self):
         """Setting for Stochastic Weighted Average
@@ -352,7 +406,7 @@ class Trainer():
             if val_score_bug > best_f1_bug:
                 best_f1_bug = val_score_bug
                 save_name = f"bug_debertav3_fold{str(self.args.val_fold)}_f1{best_f1_bug:.4f}.pth"
-                if best_f1_bug > 0.683:
+                if best_f1_bug > 0.679:
                     torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
                     print("[ Bug version ] saving model")
             if val_score_clean > best_f1_clean:

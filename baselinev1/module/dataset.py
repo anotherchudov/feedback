@@ -5,6 +5,7 @@ import numpy as np
 
 from torch.utils.data import DataLoader
 
+from module.utils import get_data_files
 from .text import TextAugmenter
 
 def split_predstring(predstring):
@@ -12,7 +13,7 @@ def split_predstring(predstring):
     return int(vals[0]), int(vals[-1])
 
 class OnlineTrainDataset(torch.utils.data.Dataset):
-    def __init__(self, args, text_ids, all_texts, df, label_smoothing, token_weights):
+    def __init__(self, args, text_ids, all_texts, df, label_smoothing, token_weights, text_augmenter):
         self.args = args
         self.all_texts = all_texts
         self.text_ids = text_ids
@@ -33,7 +34,7 @@ class OnlineTrainDataset(torch.utils.data.Dataset):
         else:
             label = self.no_aug.get_label(text_id)  
         """
-        self.text_augmenter = TextAugmenter(args, text_ids, all_texts, df)
+        self.text_augmenter = text_augmenter
 
     def __len__(self):
         return len(self.text_ids)
@@ -65,7 +66,7 @@ class OnlineTrainDataset(torch.utils.data.Dataset):
 
 
 class OnlineValidDataset(torch.utils.data.Dataset):
-    def __init__(self, args, text_ids, all_texts, df, class_names, token_weights):
+    def __init__(self, args, text_ids, all_texts, df, class_names, token_weights, text_augmenter):
         self.args = args
         self.all_texts = all_texts
         self.text_ids = text_ids
@@ -74,7 +75,7 @@ class OnlineValidDataset(torch.utils.data.Dataset):
         self.class_names = class_names
         self.token_weights = token_weights
 
-        self.text_augmenter = TextAugmenter(args, text_ids, all_texts, df, valid=True)
+        self.text_augmenter = text_augmenter
 
     def __len__(self):
         return len(self.text_ids)
@@ -243,10 +244,20 @@ def val_collate_fn(ins):
     return tuple(torch.from_numpy(np.concatenate([ins[z][x][None, :max_len] for z in range(len(ins))])) for x in range(len(ins[0]) - 3)) + ([x[-3] for x in ins], [x[-2] for x in ins], np.array([x[-1] for x in ins]),)
 
 
-def get_dataloader(args, train_ids, val_ids, data, csv, all_texts, train_text_ids, val_text_ids, class_names, token_weights):
+def get_augmenter(args):
+    # data
+    all_texts, _, _, csv, _, _, train_text_ids, val_text_ids = get_data_files(args)
+
+    train_augmenter = TextAugmenter(args, train_text_ids, all_texts, csv)
+    valid_augmenter = TextAugmenter(args, val_text_ids, all_texts, csv, valid=True)
+
+    return train_augmenter, valid_augmenter
+
+
+def get_dataloader(args, train_ids, val_ids, data, csv, all_texts, train_text_ids, val_text_ids, class_names, token_weights, train_augmenter=None, valid_augmenter=None):
     if args.online_dataset:
-        train_dataset = OnlineTrainDataset(args, train_text_ids, all_texts, csv, args.label_smoothing, token_weights)
-        val_dataset = OnlineValidDataset(args, val_text_ids, all_texts, csv, class_names, token_weights)
+        train_dataset = OnlineTrainDataset(args, train_text_ids, all_texts, csv, args.label_smoothing, token_weights, train_augmenter)
+        val_dataset = OnlineValidDataset(args, val_text_ids, all_texts, csv, class_names, token_weights, valid_augmenter)
     else:
         train_dataset = TrainDataset(train_ids, data, args.label_smoothing, token_weights, args.data_prefix)
         val_dataset = ValDataset(val_ids, data, csv, all_texts, val_text_ids, class_names, token_weights)

@@ -25,13 +25,6 @@ import torch.nn as nn
 import torch.distributed as dist
 
 # local codes
-from module.utils import get_data_files
-from module.dataset import get_dataloader
-from module.loss import get_criterion
-from module.optimizer import get_optimizer
-from module.scheduler import get_scheduler
-from model.model import get_model
-
 from module.trainer import Trainer
 
 
@@ -190,52 +183,33 @@ if __name__ == "__main__":
     if not osp.exists(args.save_path):
         os.makedirs(args.save_path)
 
-    # optimizing with 1 data doesn't work good here so opted out
-    # make trainloader batch_size to 1
-    # args.grad_acc_steps = args.batch_size
-    # args.max_grad_norm = 35 * args.batch_size
-
-    # data
-    all_texts, token_weights, data, csv, train_ids, val_ids, train_text_ids, val_text_ids = get_data_files(args)
-    train_dataloader, val_dataloader = get_dataloader(args, train_ids, val_ids, data, csv, all_texts, train_text_ids, val_text_ids, class_names, token_weights)
-
     # loss
     # args.class_weight = torch.Tensor(token_weights).to(args.device).half()
     # args.criterion_list = ["custom_ce", "custom_rce"]
     # args.criterion_ratio = [args.ce_weight, args.rce_weight]
     args.criterion_list = ["custom_ce"]
     args.criterion_ratio = [1.]
-    # args.criterion_list = ["dice"]
-    # args.criterion_ratio = [1.]
-    criterion = get_criterion(args)            
 
     # model
     # args.model = 'microsoft/deberta-v3-large'
     args.model = 'microsoft/deberta-v3-large-ducky'
-    model = get_model(args)
 
     # optimizer
     # args.optimizer = "adahessian"
-    # args.optimizer = "diffgrad"
     # args.optimizer = "adafactor"
-    # args.optimizer = "sam"
-    # args.optimizer = "adamp"
-    optimizer = get_optimizer(args, model)
 
     # scheduler
     # cosine - (one cycle learning) the learning rate will be decayed by a factor of 0.5 every 1 epochs
-    args.steps_per_epoch = len(train_dataloader)
     args.scheduler = "plateau"
     # args.scheduler = "custom_warmup"
     # args.scheduler = "cosine_annealing"
     # args.scheduler = 'cosine_annealing_warmup_restart'
-    scheduler = get_scheduler(args, optimizer)
 
     # configuration log
     print(args)
 
     # train
-    trainer = Trainer(args, model, train_dataloader, val_dataloader, scheduler, optimizer, criterion, class_names)
+    trainer = Trainer(args, class_names)
     best_f1_bug, best_f1_clean, best_f1_wonho = trainer.train()
 
     print(f'[ Bug ] best f1 - {best_f1_bug}')

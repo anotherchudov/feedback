@@ -70,7 +70,7 @@ class TextAugmenter:
         Args:
             args (argparse.Namespace): the arguments
                 TODO: further when no args are passed while initialization
-                the default values will be automatically setted by default
+                      the args values will be automatically setted by default
                 TODO: also it will be possible to change the default values
 
                 Following arguments are used in here!
@@ -748,10 +748,12 @@ class TextAugmenter:
                                      (93, 130, 'Position'),
                                      (285, 356, 'Claim')]
         """
-        fix_text = lambda x: x.replace('\n', '‽')
+        fix_text_newline = lambda x: x.replace('\n', '‽')
+        # fix_text_space = lambda x: x.replace(' ', '‽')
 
         # preprocess the text
-        text = fix_text(text.strip())
+        text = fix_text_newline(text.strip())
+        # text = fix_text_space(text)
 
         ent_boundaries = []
         pointer = 0
@@ -760,7 +762,8 @@ class TextAugmenter:
             entity_text = row.discourse_text
 
             # preprocess the entity text
-            entity_text = fix_text(row.discourse_text.strip())
+            entity_text = fix_text_newline(row.discourse_text.strip())
+            # entity_text = fix_text_space(entity_text)
 
             # regex to find text start with alphanumeric (a-zA-Z0-9)
             entity_text = entity_text[next(self.alphanumeric_re.finditer(entity_text)).start():]
@@ -876,13 +879,32 @@ class TextAugmenter:
         token_labels = np.zeros((max_len, 15), dtype='f4')
         attention_mask = np.zeros(max_len, dtype='f4')
 
-        tokens[:token_len] = tokenizer_outs['input_ids']
+        # truncate the text if text length is longer than max_len
+        if len(tokenizer_outs['input_ids']) > max_len:
+            token_input_ids = tokenizer_outs['input_ids'][:max_len]
+            token_input_ids[-1] = 2
+            targets = targets[:max_len]
+            targets[-1] = 0
+            targets[-1, 0] = 1
+            token_attention_mask = tokenizer_outs['attention_mask'][:max_len]
+            if self.valid:
+                token_offset_mapping = tokenizer_outs['offset_mapping'][:max_len]
+                token_offset_mapping[-1] = 0
+
+            token_len = max_len
+        else:
+            token_input_ids = tokenizer_outs['input_ids']
+            token_attention_mask = tokenizer_outs['attention_mask']
+            if self.valid:
+                token_offset_mapping = tokenizer_outs['offset_mapping']
+
+        tokens[:token_len] = token_input_ids
         token_labels[:token_len] = targets
-        attention_mask[:token_len] = tokenizer_outs['attention_mask']
+        attention_mask[:token_len] = token_attention_mask
 
         if self.valid:
             token_offset = np.zeros((max_len, 2), dtype='i4')
-            token_offset[:token_len] = np.vstack(tokenizer_outs['offset_mapping']).astype('i4')
+            token_offset[:token_len] = np.vstack(token_offset_mapping).astype('i4')
             label = (tokens, token_labels, attention_mask, token_offset, token_len)
         else:
             label = (tokens, token_labels, attention_mask, token_len)
