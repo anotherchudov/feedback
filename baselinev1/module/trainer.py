@@ -1,6 +1,7 @@
 
 import os.path as osp
 import numpy as np
+import pandas as pd
 import wandb
 
 from tqdm.auto import tqdm
@@ -8,10 +9,13 @@ from tqdm.auto import tqdm
 import torch
 from torch.cuda.amp import autocast, GradScaler
 from torch.optim.swa_utils import AveragedModel, SWALR
+from torch.utils.data import DataLoader
 
 from module.utils import get_data_files
 from module.dataset import get_augmenter
 from module.dataset import get_dataloader
+from module.dataset import OnlineTrainDataset
+from module.dataset import train_collate_fn
 
 from model.model import get_model
 from module.optimizer import get_optimizer
@@ -19,6 +23,8 @@ from module.scheduler import get_scheduler
 from module.loss import get_criterion
 
 from .metric import calc_acc, process_sample, init_match_dict, make_match_dict
+
+from sklearn.metrics import accuracy_score
 
 # grad scaler enum helper
 # reference - https://github.com/pytorch/pytorch/blob/1a8bd1a7eb91063d55f00c120ba29361860e6c42/torch/cuda/amp/grad_scaler.py#L31
@@ -36,9 +42,6 @@ class Trainer():
         self.args = args
         self.class_names = class_names
 
-        # noise filter
-        if self.args.noise_filter:
-            self.noise_filter_start = False
 
         # load data
         if self.args.online_dataset:
@@ -46,6 +49,12 @@ class Trainer():
             self.train_loader, self.valid_loader = self.get_online_dataloader()
         else:
             self.train_loader, self.valid_loader = self.get_offline_dataloader()
+
+        # noise filter
+        if self.args.noise_filter:
+            self.train_len = len(self.train_text_ids)
+            self.ensemble_preds = np.zeros((self.train_len, 2048, 15), dtype='f4')
+            self.sequential_loader = self.get_sequential_dataloader()
 
         self.args.steps_per_epoch = len(self.train_loader)
 
@@ -82,10 +91,14 @@ class Trainer():
     def get_online_dataloader(self):
         # the train_text_ids will be filtered while noise filtering
         # the dataset will be recreated based on filtered train_text_ids
+        all_texts, token_weights, data, csv, train_ids, val_ids, train_text_ids, val_text_ids = get_data_files(self.args)
+
+        # save train data's for further noise filtering
         if self.args.noise_filter:
-            all_texts, token_weights, data, csv, train_ids, val_ids, train_text_ids, val_text_ids = get_data_files(self.args)
-        else:
-            all_texts, token_weights, data, csv, train_ids, val_ids, train_text_ids, val_text_ids = get_data_files(self.args)
+            self.all_texts = all_texts
+            self.train_text_ids = train_text_ids
+            self.csv = csv
+            self.token_weights = token_weights
 
         train_dataloader, val_dataloader = get_dataloader(
             self.args,
@@ -104,6 +117,17 @@ class Trainer():
 
         return train_dataloader, val_dataloader
 
+    def get_sequential_dataloader(self):
+        train_dataset = OnlineTrainDataset(self.args, self.train_text_ids, self.all_texts, self.csv, self.token_weights, self.train_augmenter)
+        sequential_dataloader = DataLoader(train_dataset, collate_fn=train_collate_fn, batch_size=self.args.batch_size, num_workers=self.args.num_worker, shuffle=False)
+
+        return sequential_dataloader
+
+    def get_filter_dataloader(self, filter_text_ids):
+        filter_dataset = OnlineTrainDataset(self.args, filter_text_ids, self.all_texts, self.csv, self.token_weights, self.train_augmenter)
+        filter_dataloader = DataLoader(filter_dataset, collate_fn=train_collate_fn, batch_size=self.args.batch_size, num_workers=self.args.num_worker, shuffle=True)
+
+        return filter_dataloader
     
     def set_swa(self):
         """Setting for Stochastic Weighted Average
@@ -223,7 +247,58 @@ class Trainer():
     def lr(self):
         return self.optimizer.param_groups[0]['lr']
 
-    def train_one_epoch(self, epoch):
+    def filter_one_epoch(self, epoch, filter_loader):
+        self.model.eval()
+        alpha = self.args.noise_filter_alpha
+        filter_thres = self.args.noise_filter_acc_thres
+        train_accs = np.zeros((self.train_len), dtype='f4')
+
+        with torch.no_grad():
+            for step, batch in tqdm(enumerate(filter_loader), total=len(filter_loader)):
+
+                # calculate outs
+                tokens, mask, label, class_weight = (x.to(self.args.device) for x in batch)
+                outs = self.model(tokens, mask)
+                outs = outs.cpu().detach().numpy()
+                label = label.cpu().numpy()
+
+                # exponential moving average of predictions
+                outs_batch_size, outs_seq_size = outs.shape[0], outs.shape[1]
+                
+                start_idx = step * self.args.batch_size
+                end_idx = start_idx + outs_batch_size
+            
+                self.ensemble_preds[start_idx:end_idx, :outs_seq_size] = alpha * self.ensemble_preds[start_idx:end_idx, :outs_seq_size] + (1 - alpha) * outs
+
+                # calculate accuracy of each text
+                preds = self.ensemble_preds[start_idx:end_idx, :outs_seq_size].argmax(-1)
+                trues = label.argmax(-1)
+
+                train_accs[start_idx:end_idx] = [accuracy_score(true, pred) for true, pred in zip(trues, preds)]
+
+            # create train texts dataframe with accuracy score
+            train_df = pd.DataFrame({'text_ids': self.train_text_ids, 'accuracy': train_accs})
+
+            # filter the texts by accuracy
+            filter_text_ids = train_df.query('accuracy > @filter_thres').text_ids.values.tolist()
+
+        # debugging
+        # if len(filter_text_ids) == 0:
+        #     filter_text_ids = self.train_text_ids[:100]
+
+        # log
+        print('-' * 20)
+        print(f'[ Filter ] - Process step {epoch - 1}')
+        print(f'                - alpha {alpha}')
+        print(f'                - filter accuracy threshold {filter_thres}')
+        print(f'             Total texts {self.train_len}')
+        print(f'             Clean texts {len(filter_text_ids)} ({100 * len(filter_text_ids) / self.train_len:.2f} %)')
+        print('-' * 20, '\n')
+
+        return filter_text_ids
+
+
+    def train_one_epoch(self, epoch, train_loader):
         self.model.train()
 
         losses = []
@@ -236,7 +311,7 @@ class Trainer():
 
         # scaler = GradScaler(65536.0 / self.args.grad_acc_steps)
         scaler = GradScaler()
-        pbar = tqdm(enumerate(self.train_loader), total=len(self.train_loader))
+        pbar = tqdm(enumerate(train_loader), total=len(train_loader))
         for step, batch in pbar:
 
             if (step + 1) % self.args.grad_acc_steps == 0:
@@ -392,8 +467,14 @@ class Trainer():
         best_f1_wonho = 0
         for epoch in range(1, self.args.epochs + 1):
 
-            # train
-            # self.train_one_epoch(epoch)
+            if self.args.noise_filter and epoch > 1:
+                # noise filter
+                filter_text_ids = self.filter_one_epoch(epoch, self.sequential_loader)
+                filter_loader = self.get_filter_dataloader(filter_text_ids)
+                self.train_one_epoch(epoch, filter_loader)
+            else:
+                # train
+                self.train_one_epoch(epoch, self.train_loader)
 
             # validation
             val_loss, f1s_bug, rec_bug, prec_bug, f1s_clean, rec_clean, prec_clean, f1s_wonho, rec_wonho, prec_wonho = self.valid_one_epoch(epoch)
@@ -417,19 +498,19 @@ class Trainer():
             if val_score_bug > best_f1_bug:
                 best_f1_bug = val_score_bug
                 save_name = f"bug_debertav3_fold{str(self.args.val_fold)}_f1{best_f1_bug:.4f}.pth"
-                if best_f1_bug > 0.675:
+                if best_f1_bug > 0.67:
                     torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
                     print("[ Bug version ] saving model")
             if val_score_clean > best_f1_clean:
                 best_f1_clean = val_score_clean
                 save_name = f"clean_debertav3_fold{str(self.args.val_fold)}_f1{best_f1_clean:.4f}.pth"
-                if best_f1_clean > 0.68:
+                if best_f1_clean > 0.67:
                     torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
                     print("[ Clean version ] saving model")
             if val_score_wonho > best_f1_wonho:
                 best_f1_wonho = val_score_wonho
                 save_name = f"wonho_debertav3_fold{str(self.args.val_fold)}_f1{best_f1_wonho:.4f}.pth"
-                if best_f1_wonho > 0.683:
+                if best_f1_wonho > 0.67:
                     torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
                     print("[ Wonho version ] saving model")
 

@@ -275,6 +275,7 @@ class TextAugmenter:
         
         - char replacement
         - char remove
+        - newline(\n) injection
         
         Args:
             text_id (str): the text id for cache
@@ -854,8 +855,8 @@ class TextAugmenter:
                     if len(all_boundaries) > 1 and token_end_ix > next_pos:
                         
                         # can this actually happen?
-                        if token_start_ix >= next_pos:
-                            assert text[cur_pos - 1] == '¨'
+                        # if token_start_ix >= next_pos:
+                        #     assert text[cur_pos - 1] == '¨'
 
                         all_boundaries.popleft()
                         current_target = cat2id[cur_cat_type]

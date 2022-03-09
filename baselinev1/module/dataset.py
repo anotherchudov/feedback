@@ -13,13 +13,12 @@ def split_predstring(predstring):
     return int(vals[0]), int(vals[-1])
 
 class OnlineTrainDataset(torch.utils.data.Dataset):
-    def __init__(self, args, text_ids, all_texts, df, label_smoothing, token_weights, text_augmenter):
+    def __init__(self, args, text_ids, all_texts, df, token_weights, text_augmenter):
         self.args = args
         self.all_texts = all_texts
         self.text_ids = text_ids
         self.df = df
 
-        self.label_smoothing = label_smoothing
         self.token_weights = token_weights
 
         # you could add more text augmenter here and take turns using it
@@ -47,8 +46,8 @@ class OnlineTrainDataset(torch.utils.data.Dataset):
         tokens, token_labels, attention_mask, num_tokens = label
 
         # label smoothing
-        token_labels *= (1 - self.label_smoothing)
-        token_labels += self.label_smoothing / 15
+        token_labels *= (1 - self.args.label_smoothing)
+        token_labels += self.args.label_smoothing / 15
 
         # class weight per token
         class_weight = np.zeros_like(attention_mask)
@@ -256,7 +255,7 @@ def get_augmenter(args):
 
 def get_dataloader(args, train_ids, val_ids, data, csv, all_texts, train_text_ids, val_text_ids, class_names, token_weights, train_augmenter=None, valid_augmenter=None):
     if args.online_dataset:
-        train_dataset = OnlineTrainDataset(args, train_text_ids, all_texts, csv, args.label_smoothing, token_weights, train_augmenter)
+        train_dataset = OnlineTrainDataset(args, train_text_ids, all_texts, csv, token_weights, train_augmenter)
         val_dataset = OnlineValidDataset(args, val_text_ids, all_texts, csv, class_names, token_weights, valid_augmenter)
     else:
         train_dataset = TrainDataset(train_ids, data, args.label_smoothing, token_weights, args.data_prefix)
