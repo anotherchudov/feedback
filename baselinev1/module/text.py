@@ -749,11 +749,13 @@ class TextAugmenter:
                                      (285, 356, 'Claim')]
         """
         fix_text_newline = lambda x: x.replace('\n', '‽')
-        # fix_text_space = lambda x: x.replace(' ', '‽')
+        fix_text_space = lambda x: x.replace(' ', '‽')
+        fix_text_double_space = lambda x: x.replace('  ', '‽')
 
         # preprocess the text
         text = fix_text_newline(text.strip())
-        # text = fix_text_space(text)
+        text = fix_text_space(text) if self.args.use_space else text
+        text = fix_text_double_space(text) if self.args.use_double_space else text
 
         ent_boundaries = []
         pointer = 0
@@ -763,7 +765,8 @@ class TextAugmenter:
 
             # preprocess the entity text
             entity_text = fix_text_newline(row.discourse_text.strip())
-            # entity_text = fix_text_space(entity_text)
+            entity_text = fix_text_space(entity_text) if self.args.use_space else text
+            entity_text = fix_text_double_space(entity_text) if self.args.use_double_space else text
 
             # regex to find text start with alphanumeric (a-zA-Z0-9)
             entity_text = entity_text[next(self.alphanumeric_re.finditer(entity_text)).start():]
@@ -889,7 +892,7 @@ class TextAugmenter:
             token_attention_mask = tokenizer_outs['attention_mask'][:max_len]
             if self.valid:
                 token_offset_mapping = tokenizer_outs['offset_mapping'][:max_len]
-                token_offset_mapping[-1] = 0
+                token_offset_mapping[-1] = (0, 0)
 
             token_len = max_len
         else:

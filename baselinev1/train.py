@@ -87,9 +87,14 @@ def get_config():
     parser.add_argument("--swa_update_per_epoch", default=1, type=int)
     parser.add_argument("--swa_start_ratio", default=0.1, type=float, help="start swa after this ratio of total epochs")
 
+    # noise filtering
+    parser.add_argument("--noise_filter", action="store_true", help="apply noise filtering")
+
     # online dataset
     parser.add_argument("--online_dataset", action="store_true", help="use dataset that directly preprocess text online")
 
+    parser.add_argument("--use_space", action="store_true", help="use space as token")
+    parser.add_argument("--use_double_space", action="store_true", help="use double space as token")
     parser.add_argument("--text_aug_min_len", default=15, type=int, help="to apply augmentation, the length of sentence must be larger than this value")
     parser.add_argument("--noise_injection", action="store_true", help="use noise injection")
     parser.add_argument("--back_translation", action="store_true", help="use back translation")
@@ -168,7 +173,7 @@ if __name__ == "__main__":
     # wandb setting
     if args.wandb:
         wandb_run = wandb_setting(args)
-        wandb_run.name = f'debertav3_fold_lr{args.lr}_{args.wandb_comment}'
+        wandb_run.name = f'debertav3_fold{args.val_fold}_lr{args.lr}_{args.wandb_comment}'
 
     class_names = ['None',
                    'Lead',

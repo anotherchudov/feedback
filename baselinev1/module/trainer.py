@@ -36,6 +36,10 @@ class Trainer():
         self.args = args
         self.class_names = class_names
 
+        # noise filter
+        if self.args.noise_filter:
+            self.noise_filter_start = False
+
         # load data
         if self.args.online_dataset:
             self.train_augmenter, self.val_augmenter = get_augmenter(self.args)
@@ -76,7 +80,13 @@ class Trainer():
         return train_dataloader, val_dataloader
 
     def get_online_dataloader(self):
-        all_texts, token_weights, data, csv, train_ids, val_ids, train_text_ids, val_text_ids = get_data_files(self.args)
+        # the train_text_ids will be filtered while noise filtering
+        # the dataset will be recreated based on filtered train_text_ids
+        if self.args.noise_filter:
+            all_texts, token_weights, data, csv, train_ids, val_ids, train_text_ids, val_text_ids = get_data_files(self.args)
+        else:
+            all_texts, token_weights, data, csv, train_ids, val_ids, train_text_ids, val_text_ids = get_data_files(self.args)
+
         train_dataloader, val_dataloader = get_dataloader(
             self.args,
             train_ids,
@@ -263,6 +273,7 @@ class Trainer():
                 outs = self.model(tokens, mask)
                 loss = self.criterion(outs, label, class_weight=class_weight)
                 loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_grad_norm)
                 self.optimizer.step()
                 losses.append(loss.item())
 
@@ -382,7 +393,7 @@ class Trainer():
         for epoch in range(1, self.args.epochs + 1):
 
             # train
-            self.train_one_epoch(epoch)
+            # self.train_one_epoch(epoch)
 
             # validation
             val_loss, f1s_bug, rec_bug, prec_bug, f1s_clean, rec_clean, prec_clean, f1s_wonho, rec_wonho, prec_wonho = self.valid_one_epoch(epoch)
@@ -406,7 +417,7 @@ class Trainer():
             if val_score_bug > best_f1_bug:
                 best_f1_bug = val_score_bug
                 save_name = f"bug_debertav3_fold{str(self.args.val_fold)}_f1{best_f1_bug:.4f}.pth"
-                if best_f1_bug > 0.679:
+                if best_f1_bug > 0.675:
                     torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
                     print("[ Bug version ] saving model")
             if val_score_clean > best_f1_clean:
