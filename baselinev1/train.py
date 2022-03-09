@@ -90,11 +90,13 @@ def get_config():
     # noise filtering
     parser.add_argument("--noise_filter", action="store_true", help="apply noise filtering")
 
+    # token
+    parser.add_argument("--use_space", action="store_true", help="use space as token")
+    parser.add_argument("--use_double_space", action="store_true", help="use double space as token")
+
     # online dataset
     parser.add_argument("--online_dataset", action="store_true", help="use dataset that directly preprocess text online")
 
-    parser.add_argument("--use_space", action="store_true", help="use space as token")
-    parser.add_argument("--use_double_space", action="store_true", help="use double space as token")
     parser.add_argument("--text_aug_min_len", default=15, type=int, help="to apply augmentation, the length of sentence must be larger than this value")
     parser.add_argument("--noise_injection", action="store_true", help="use noise injection")
     parser.add_argument("--back_translation", action="store_true", help="use back translation")

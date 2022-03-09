@@ -765,8 +765,8 @@ class TextAugmenter:
 
             # preprocess the entity text
             entity_text = fix_text_newline(row.discourse_text.strip())
-            entity_text = fix_text_space(entity_text) if self.args.use_space else text
-            entity_text = fix_text_double_space(entity_text) if self.args.use_double_space else text
+            entity_text = fix_text_space(entity_text) if self.args.use_space else entity_text
+            entity_text = fix_text_double_space(entity_text) if self.args.use_double_space else entity_text
 
             # regex to find text start with alphanumeric (a-zA-Z0-9)
             entity_text = entity_text[next(self.alphanumeric_re.finditer(entity_text)).start():]
