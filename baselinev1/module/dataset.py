@@ -49,6 +49,8 @@ class OnlineTrainDataset(torch.utils.data.Dataset):
         token_labels *= (1 - self.args.label_smoothing)
         token_labels += self.args.label_smoothing / 15
 
+        # TODO: use token label from EMA processed self-ensembled prediction
+
         # class weight per token
         class_weight = np.zeros_like(attention_mask)
         argmax_labels = token_labels.argmax(-1)

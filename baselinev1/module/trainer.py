@@ -1,5 +1,7 @@
 
+import os
 import os.path as osp
+import copy
 import numpy as np
 import pandas as pd
 import wandb
@@ -7,6 +9,7 @@ import wandb
 from tqdm.auto import tqdm
 
 import torch
+import torch.nn.functional as F
 from torch.cuda.amp import autocast, GradScaler
 from torch.optim.swa_utils import AveragedModel, SWALR
 from torch.utils.data import DataLoader
@@ -50,19 +53,21 @@ class Trainer():
         else:
             self.train_loader, self.valid_loader = self.get_offline_dataloader()
 
-        # noise filter
-        if self.args.noise_filter:
-            self.train_len = len(self.train_text_ids)
-            self.ensemble_preds = np.zeros((self.train_len, 2048, 15), dtype='f4')
-            self.sequential_loader = self.get_sequential_dataloader()
-
         self.args.steps_per_epoch = len(self.train_loader)
 
-        # -
+        # prepare model, etc
         self.model = get_model(args)
         self.optimizer = get_optimizer(args, self.model)
         self.scheduler = get_scheduler(args, self.optimizer)
         self.criterion = get_criterion(args)            
+
+        # noise filter
+        if self.args.noise_filter:
+            self.train_len = len(self.train_text_ids)
+            self.mean_teacher = copy.deepcopy(self.model)
+            self.ensemble_preds = np.zeros((self.train_len, 2048, 15), dtype='f4')
+            self.sequential_loader = self.get_sequential_dataloader()
+
 
         if self.args.swa:
             self.set_swa()
@@ -70,6 +75,7 @@ class Trainer():
         # when swa run the own scheduler flag will be set as False
         self.run_scheduler = True
         self.val_model = self.model
+
 
     def get_offline_dataloader(self):
         all_texts, token_weights, data, csv, train_ids, val_ids, train_text_ids, val_text_ids = get_data_files(self.args)
@@ -248,7 +254,7 @@ class Trainer():
         return self.optimizer.param_groups[0]['lr']
 
     def filter_one_epoch(self, epoch, filter_loader):
-        self.model.eval()
+        self.mean_teacher.eval()
         alpha = self.args.noise_filter_alpha
         filter_thres = self.args.noise_filter_acc_thres
         train_accs = np.zeros((self.train_len), dtype='f4')
@@ -258,7 +264,7 @@ class Trainer():
 
                 # calculate outs
                 tokens, mask, label, class_weight = (x.to(self.args.device) for x in batch)
-                outs = self.model(tokens, mask)
+                outs = self.mean_teacher(tokens, mask)
                 outs = outs.cpu().detach().numpy()
                 label = label.cpu().numpy()
 
@@ -300,6 +306,8 @@ class Trainer():
 
     def train_one_epoch(self, epoch, train_loader):
         self.model.train()
+        if self.args.noise_filter:
+            self.mean_teacher.train()
 
         losses = []
         match_stats = {ix:  {'fp': 0, 'fn': 0, 'tp': 0} for ix in range(1, 8)}
@@ -347,11 +355,35 @@ class Trainer():
             else:
                 outs = self.model(tokens, mask)
                 loss = self.criterion(outs, label, class_weight=class_weight)
-                loss.backward()
+
+                # mean teacher
+                if self.args.noise_filter:
+                    with torch.no_grad():
+                        mean_outs = self.mean_teacher(tokens, mask)
+
+                    # consistency loss
+                    const_outs = F.log_softmax(outs, -1)
+                    const_mean_outs = F.log_softmax(mean_outs, -1)
+                    const_loss = F.mse_loss(const_outs, const_mean_outs)
+                    # print('consistency_loss', const_loss.item())
+
+                    loss = loss + self.args.const_loss_weight * const_loss
+
+                # don't know why but create_graph=True doens't work..
+                if self.args.optimizer == 'adahessian':
+                    loss.backward(create_graph=True)
+                else:
+                    loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_grad_norm)
                 self.optimizer.step()
                 losses.append(loss.item())
 
+                # mean teacher
+                if self.args.noise_filter:
+                    # update mean teacher model weight
+                    alpha = self.args.mean_teacher_alpha
+                    for mean_param, param in zip(self.mean_teacher.parameters(), self.model.parameters()):
+                        mean_param.data = alpha * mean_param.data + (1 - alpha) * param.data
 
             # SWA - stochastic weight averaging
             """swa scheduler is disabled"""
@@ -385,7 +417,7 @@ class Trainer():
 
     
     def valid_one_epoch(self, epoch):
-        self.model.eval()
+        self.val_model.eval()
 
         losses = []
 
@@ -460,7 +492,82 @@ class Trainer():
 
         return val_loss, f1s_bug, rec_bug, prec_bug, f1s_clean, rec_clean, prec_clean, f1s_wonho, rec_wonho, prec_wonho
 
+    def mean_teacher_valid_one_epoch(self, epoch):
+        self.mean_teacher.eval()
+
+        losses = []
+
+        # 3-way validation strategy
+        # val_matches = torch.zeros(16)
+        # val_labels = torch.zeros(16)
+        match_stats_bug = {ix:  {'fp': 0, 'fn': 0, 'tp': 0} for ix in range(1, 8)}
+        f1s_bug = np.zeros(8)
+        rec_bug = np.zeros(7)
+        prec_bug = np.zeros(7)
+        match_stats_clean = {ix:  {'fp': 0, 'fn': 0, 'tp': 0} for ix in range(1, 8)}
+        f1s_clean = np.zeros(8)
+        rec_clean = np.zeros(7)
+        prec_clean = np.zeros(7)
+        match_stats_wonho = {ix:  {'fp': 0, 'fn': 0, 'tp': 0} for ix in range(1, 8)}
+        f1s_wonho = np.zeros(8)
+        rec_wonho = np.zeros(7)
+        prec_wonho = np.zeros(7)
+
+        for tokens, mask, labels, labels_mask, bounds, gt_dicts, index_map, num_tokens in tqdm(self.valid_loader, total=len(self.valid_loader)):
+            with torch.no_grad():
+                tokens, mask, label, class_weight = (x.to(self.args.device) for x in (tokens, mask, labels, labels_mask))
+
+                # with autocast():
+                #     outs = self.val_model(tokens, mask)
+                #     loss = self.criterion(outs, label, class_weight=class_weight)
+                outs = self.mean_teacher(tokens, mask)
+                loss = self.criterion(outs, label, class_weight=class_weight)
+
+                losses.append(loss)
+
+                # match_updates = calc_acc(outs, label, class_weight)
+                # val_matches += match_updates[0]
+                # val_labels += match_updates[1]
+                for sample_ix, num in enumerate(num_tokens):
+                    match_stats_bug = process_sample(outs[sample_ix], labels[sample_ix], index_map[sample_ix], bounds[sample_ix], gt_dicts[sample_ix], num, match_stats_bug, version='bug')
+                    match_stats_clean = process_sample(outs[sample_ix], labels[sample_ix], index_map[sample_ix], bounds[sample_ix], gt_dicts[sample_ix], num, match_stats_clean, version='clean')
+                    match_stats_wonho = process_sample(outs[sample_ix], labels[sample_ix], index_map[sample_ix], bounds[sample_ix], gt_dicts[sample_ix], num, match_stats_wonho, version='wonho')
+
+        print(f'Currenlty on [ Mean Teacher bug ] version')
+        print(f'Predicted match stats: {match_stats_bug}\n')
+        print(f'Currenlty on [ Mean Teacher clean ] version')
+        print(f'Predicted match stats: {match_stats_clean}\n')
+        print(f'Currenlty on [ Mean Teacher wonho ] version')
+        print(f'Predicted match stats: {match_stats_wonho}\n')
+        print('-' * 50)
+
+        for ix in range(1, 8):
+            f1s_bug[ix] = match_stats_bug[ix]['tp'] / (1e-7 + match_stats_bug[ix]['tp'] + .5 * (match_stats_bug[ix]['fp'] + match_stats_bug[ix]['fn']))
+            rec_bug[ix - 1] = match_stats_bug[ix]['tp'] / (1e-7 + match_stats_bug[ix]['tp'] + match_stats_bug[ix]['fn'])
+            prec_bug[ix - 1] = match_stats_bug[ix]['tp'] / (1e-7 + match_stats_bug[ix]['tp'] + match_stats_bug[ix]['fp'])
+
+            f1s_clean[ix] = match_stats_clean[ix]['tp'] / (1e-7 + match_stats_clean[ix]['tp'] + .5 * (match_stats_clean[ix]['fp'] + match_stats_clean[ix]['fn']))
+            rec_clean[ix - 1] = match_stats_clean[ix]['tp'] / (1e-7 + match_stats_clean[ix]['tp'] + match_stats_clean[ix]['fn'])
+            prec_clean[ix - 1] = match_stats_clean[ix]['tp'] / (1e-7 + match_stats_clean[ix]['tp'] + match_stats_clean[ix]['fp'])
+
+            f1s_wonho[ix] = match_stats_wonho[ix]['tp'] / (1e-7 + match_stats_wonho[ix]['tp'] + .5 * (match_stats_wonho[ix]['fp'] + match_stats_wonho[ix]['fn']))
+            rec_wonho[ix - 1] = match_stats_wonho[ix]['tp'] / (1e-7 + match_stats_wonho[ix]['tp'] + match_stats_wonho[ix]['fn'])
+            prec_wonho[ix - 1] = match_stats_wonho[ix]['tp'] / (1e-7 + match_stats_wonho[ix]['tp'] + match_stats_wonho[ix]['fp'])
+
+        val_score_bug = np.mean(f1s_bug[1:])
+        val_score_clean = np.mean(f1s_clean[1:])
+        val_score_wonho = np.mean(f1s_wonho[1:])
+
+        print(f'Mean Teacher Validation [ Bug ] {val_score_bug}')
+        print(f'Mean Teacher Validation [ Clean ] {val_score_clean}')
+        print(f'Mean Teacher Validation [ Wonho ] {val_score_wonho}')
+
     def train(self):
+
+        # create folder to save model
+        save_folder_path = osp.join(self.args.save_path, self.args.wandb_comment)
+        if not os.path.exists(save_folder_path):
+            os.mkdir(save_folder_path)
 
         best_f1_bug = 0
         best_f1_clean = 0
@@ -478,6 +585,9 @@ class Trainer():
 
             # validation
             val_loss, f1s_bug, rec_bug, prec_bug, f1s_clean, rec_clean, prec_clean, f1s_wonho, rec_wonho, prec_wonho = self.valid_one_epoch(epoch)
+            if self.args.noise_filter:
+                self.mean_teacher_valid_one_epoch(epoch)
+
             val_score_bug = f1s_bug[0]
             val_score_clean = f1s_clean[0]
             val_score_wonho = f1s_wonho[0]
@@ -494,25 +604,35 @@ class Trainer():
                 log_dict = make_match_dict(log_dict, self.class_names, 'Wonho', (f1s_wonho, rec_wonho, prec_wonho))
                 wandb.log(log_dict) 
 
+
+            # change saving model to mean teacher
+            if self.args.noise_filter:
+                temp_val_model = self.val_model
+                self.val_model = self.mean_teacher
+
             # saving model
             if val_score_bug > best_f1_bug:
                 best_f1_bug = val_score_bug
-                save_name = f"bug_debertav3_fold{str(self.args.val_fold)}_f1{best_f1_bug:.4f}.pth"
+                save_name = f"bug_debertav3_fold{str(self.args.val_fold)}_{self.args.wandb_comment}_f1{best_f1_bug:.4f}.pth"
                 if best_f1_bug > 0.67:
-                    torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
+                    torch.save(self.val_model.state_dict(), osp.join(save_folder_path, save_name))
                     print("[ Bug version ] saving model")
             if val_score_clean > best_f1_clean:
                 best_f1_clean = val_score_clean
-                save_name = f"clean_debertav3_fold{str(self.args.val_fold)}_f1{best_f1_clean:.4f}.pth"
+                save_name = f"clean_debertav3_fold{str(self.args.val_fold)}_{self.args.wandb_comment}_f1{best_f1_clean:.4f}.pth"
                 if best_f1_clean > 0.67:
-                    torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
+                    torch.save(self.val_model.state_dict(), osp.join(save_folder_path, save_name))
                     print("[ Clean version ] saving model")
             if val_score_wonho > best_f1_wonho:
                 best_f1_wonho = val_score_wonho
-                save_name = f"wonho_debertav3_fold{str(self.args.val_fold)}_f1{best_f1_wonho:.4f}.pth"
+                save_name = f"wonho_debertav3_fold{str(self.args.val_fold)}_{self.args.wandb_comment}_f1{best_f1_wonho:.4f}.pth"
                 if best_f1_wonho > 0.67:
-                    torch.save(self.val_model.state_dict(), osp.join(self.args.save_path, save_name))
+                    torch.save(self.val_model.state_dict(), osp.join(save_folder_path, save_name))
                     print("[ Wonho version ] saving model")
+
+            # change saving model to original
+            if self.args.noise_filter:
+                self.val_model = temp_val_model
 
             # scheduler
             if self.run_scheduler and self.args.scheduler == 'plateau':

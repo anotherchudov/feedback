@@ -89,8 +89,11 @@ def get_config():
 
     # noise filtering
     parser.add_argument("--noise_filter", action="store_true", help="apply noise filtering")
-    parser.add_argument("--noise_filter_alpha", default=0.8, type=float, help="alpa for noise filtering exponential moving average")
-    parser.add_argument("--noise_filter_acc_thres", default=0.7, type=float, help="accuracy threshold for filtering process")
+    parser.add_argument("--noise_filter_alpha", default=0.99, type=float, help="alpha for noise filtering exponential moving average")
+    parser.add_argument("--noise_filter_acc_thres", default=0.6, type=float, help="accuracy threshold for filtering process")
+    
+    parser.add_argument("--const_loss_weight", default=10.0, type=float, help="mean teacher consistency loss")
+    parser.add_argument("--mean_teacher_alpha", default=0.99, type=float, help="alpha for noise filtering exponential moving average")
 
     # token
     parser.add_argument("--use_space", action="store_true", help="use space as token")
