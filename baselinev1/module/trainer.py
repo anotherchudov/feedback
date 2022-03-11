@@ -2,6 +2,7 @@
 import os
 import os.path as osp
 import copy
+import pickle
 import numpy as np
 import pandas as pd
 import wandb
@@ -637,6 +638,16 @@ class Trainer():
             # scheduler
             if self.run_scheduler and self.args.scheduler == 'plateau':
                 self.scheduler.step(-val_loss)
+
+
+        # save ensemble predictions and text_ids
+        if self.args.noise_filter:
+            token_distillation = [self.train_text_ids, self.ensemble_preds]
+
+            # save as pickle
+            save_name = f"token_distillation_debertav3_fold{str(self.args.val_fold)}_{self.args.wandb_comment}.pkl"
+            with open(osp.join(save_folder_path, save_name), 'wb') as f:
+                pickle.dump(token_distillation, f)
         
         return best_f1_bug, best_f1_clean, best_f1_wonho
 
