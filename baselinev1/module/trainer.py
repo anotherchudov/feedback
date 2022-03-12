@@ -615,12 +615,6 @@ class Trainer():
 
                 wandb.log(log_dict) 
 
-
-            # change saving model to mean teacher
-            if self.args.noise_filter:
-                temp_val_model = self.val_model
-                self.val_model = self.mean_teacher
-
             # saving model
             if val_score_bug > best_f1_bug:
                 best_f1_bug = val_score_bug
@@ -641,11 +635,8 @@ class Trainer():
                     torch.save(self.val_model.state_dict(), osp.join(save_folder_path, save_name))
                     print("[ Wonho version ] saving model")
 
-            # change saving model to original
+            # save mean teacher model
             if self.args.noise_filter:
-                self.val_model = temp_val_model
-
-                # saving model
                 if self.mean_teacher_val_score_bug > mean_teacher_best_f1_bug:
                     mean_teacher_best_f1_bug = self.mean_teacher_val_score_bug
                     save_name = f"bug_mean_teacher_debertav3_fold{str(self.args.val_fold)}_{self.args.wandb_comment}_f1{mean_teacher_best_f1_bug:.4f}.pth"
