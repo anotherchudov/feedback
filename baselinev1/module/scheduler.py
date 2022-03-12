@@ -100,7 +100,7 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
 
 def get_scheduler(args, optimizer):
     if args.scheduler == 'plateau':
-        scheduler = ReduceLROnPlateau(optimizer, patience=1, factor=0.8, mode='max', verbose=True)
+        scheduler = ReduceLROnPlateau(optimizer, patience=1, factor=0.9, mode='max', verbose=True)
     if args.scheduler == 'cosine_annealing':
         """ Aiming for One Cycle Learning!
         - T_max is setted as the half of the total steps of 1 epoch

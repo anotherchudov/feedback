@@ -555,13 +555,13 @@ class Trainer():
             rec_wonho[ix - 1] = match_stats_wonho[ix]['tp'] / (1e-7 + match_stats_wonho[ix]['tp'] + match_stats_wonho[ix]['fn'])
             prec_wonho[ix - 1] = match_stats_wonho[ix]['tp'] / (1e-7 + match_stats_wonho[ix]['tp'] + match_stats_wonho[ix]['fp'])
 
-        val_score_bug = np.mean(f1s_bug[1:])
-        val_score_clean = np.mean(f1s_clean[1:])
-        val_score_wonho = np.mean(f1s_wonho[1:])
+        self.mean_teacher_val_score_bug = np.mean(f1s_bug[1:])
+        self.mean_teacher_val_score_clean = np.mean(f1s_clean[1:])
+        self.mean_teacher_val_score_wonho = np.mean(f1s_wonho[1:])
 
-        print(f'Mean Teacher Validation [ Bug ] {val_score_bug}')
-        print(f'Mean Teacher Validation [ Clean ] {val_score_clean}')
-        print(f'Mean Teacher Validation [ Wonho ] {val_score_wonho}')
+        print(f'Mean Teacher Validation [ Bug ] {self.mean_teacher_val_score_bug}')
+        print(f'Mean Teacher Validation [ Clean ] {self.mean_teacher_val_score_clean}')
+        print(f'Mean Teacher Validation [ Wonho ] {self.mean_teacher_val_score_wonho}')
 
     def train(self):
 
@@ -573,6 +573,11 @@ class Trainer():
         best_f1_bug = 0
         best_f1_clean = 0
         best_f1_wonho = 0
+
+        if self.args.noise_filter:
+            mean_teacher_best_f1_bug = 0
+            mean_teacher_best_f1_clean = 0
+            mean_teacher_best_f1_wonho = 0
         for epoch in range(1, self.args.epochs + 1):
 
             if self.args.noise_filter and epoch > 1:
@@ -603,6 +608,11 @@ class Trainer():
                 log_dict = make_match_dict(log_dict, self.class_names, 'Bug', (f1s_bug, rec_bug, prec_bug))
                 log_dict = make_match_dict(log_dict, self.class_names, 'Clean', (f1s_clean, rec_clean, prec_clean))
                 log_dict = make_match_dict(log_dict, self.class_names, 'Wonho', (f1s_wonho, rec_wonho, prec_wonho))
+                if self.args.noise_filter:
+                    log_dict.update({'bug_mean_teacher_f1macro': self.mean_teacher_val_score_bug})
+                    log_dict.update({'clean_mean_teacher_f1macro': self.mean_teacher_val_score_clean})
+                    log_dict.update({'wonho_mean_teacher_f1macro': self.mean_teacher_val_score_wonho})
+
                 wandb.log(log_dict) 
 
 
@@ -634,6 +644,26 @@ class Trainer():
             # change saving model to original
             if self.args.noise_filter:
                 self.val_model = temp_val_model
+
+                # saving model
+                if self.mean_teacher_val_score_bug > mean_teacher_best_f1_bug:
+                    mean_teacher_best_f1_bug = self.mean_teacher_val_score_bug
+                    save_name = f"bug_mean_teacher_debertav3_fold{str(self.args.val_fold)}_{self.args.wandb_comment}_f1{mean_teacher_best_f1_bug:.4f}.pth"
+                    if mean_teacher_best_f1_bug > 0.67:
+                        torch.save(self.mean_teacher.state_dict(), osp.join(save_folder_path, save_name))
+                        print("[ Bug version ] mean teacher saving model")
+                if self.mean_teacher_val_score_clean > mean_teacher_best_f1_clean:
+                    mean_teacher_best_f1_clean = self.mean_teacher_val_score_clean
+                    save_name = f"clean_mean_teacher_debertav3_fold{str(self.args.val_fold)}_{self.args.wandb_comment}_f1{mean_teacher_best_f1_clean:.4f}.pth"
+                    if mean_teacher_best_f1_clean > 0.67:
+                        torch.save(self.mean_teacher.state_dict(), osp.join(save_folder_path, save_name))
+                        print("[ Clean version ] mean teacher saving model")
+                if self.mean_teacher_val_score_wonho > mean_teacher_best_f1_wonho:
+                    mean_teacher_best_f1_wonho = self.mean_teacher_val_score_wonho
+                    save_name = f"wonho_mean_teacher_debertav3_fold{str(self.args.val_fold)}_{self.args.wandb_comment}_f1{mean_teacher_best_f1_wonho:.4f}.pth"
+                    if mean_teacher_best_f1_wonho > 0.67:
+                        torch.save(self.mean_teacher.state_dict(), osp.join(save_folder_path, save_name))
+                        print("[ Wonho version ] mean teacher saving model")
 
             # scheduler
             if self.run_scheduler and self.args.scheduler == 'plateau':
