@@ -326,7 +326,10 @@ class Trainer():
             if (step + 1) % self.args.grad_acc_steps == 0:
                 self.optimizer.zero_grad()
             
-            tokens, mask, label, class_weight = (x.to(self.args.device) for x in batch)
+            if self.args.distill:
+                tokens, mask, label, distill_label, class_weight = (x.to(self.args.device) for x in batch)
+            else:
+                tokens, mask, label, class_weight = (x.to(self.args.device) for x in batch)
             """Sam Optimizer process is decoupled due to different training approach
            
             CAUTION:
@@ -355,6 +358,7 @@ class Trainer():
 
             else:
                 outs = self.model(tokens, mask)
+
                 loss = self.criterion(outs, label, class_weight=class_weight)
 
                 # mean teacher
@@ -369,6 +373,13 @@ class Trainer():
                     # print('consistency_loss', const_loss.item())
 
                     loss = loss + self.args.const_loss_weight * const_loss
+
+                if self.args.distill:
+                    distill_loss = F.mse_loss(outs, distill_label)
+                    # print('distillation loss', distill_loss.item())
+
+                    # loss = distill_loss
+                    loss = loss + distill_loss
 
                 # don't know why but create_graph=True doens't work..
                 if self.args.optimizer == 'adahessian':

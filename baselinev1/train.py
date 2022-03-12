@@ -87,6 +87,9 @@ def get_config():
     parser.add_argument("--swa_update_per_epoch", default=1, type=int)
     parser.add_argument("--swa_start_ratio", default=0.1, type=float, help="start swa after this ratio of total epochs")
 
+    # distillation
+    parser.add_argument("--distill", action="store_true", help="use distillation")
+
     # noise filtering
     parser.add_argument("--noise_filter", action="store_true", help="apply noise filtering")
     parser.add_argument("--noise_filter_alpha", default=0.99, type=float, help="alpha for noise filtering exponential moving average")

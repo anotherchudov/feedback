@@ -4,6 +4,7 @@ wandb/
 
 # model
 *.pt
+*.pkl
 *.pth
 *.bin
 

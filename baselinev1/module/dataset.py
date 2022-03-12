@@ -2,6 +2,7 @@ from random import shuffle
 import re
 import torch
 import numpy as np
+import pickle
 
 from torch.utils.data import DataLoader
 
@@ -35,6 +36,11 @@ class OnlineTrainDataset(torch.utils.data.Dataset):
         """
         self.text_augmenter = text_augmenter
 
+        if self.args.distill:
+            distill_path = 'result/online_no_wd_noise_filtering0.4_mean_teacher0.99/token_distillation_debertav3_fold0_online_no_wd_noise_filtering0.4_mean_teacher0.99.pkl'
+            with open(distill_path, 'rb') as f:
+                self.distill_info = pickle.load(f)
+
     def __len__(self):
         return len(self.text_ids)
 
@@ -44,6 +50,11 @@ class OnlineTrainDataset(torch.utils.data.Dataset):
         # load train data
         label = self.text_augmenter.get_label(text_id, cache=False)  
         tokens, token_labels, attention_mask, num_tokens = label
+
+        # distillation
+        if self.args.distill:
+            distill_i = self.distill_info[0].index(text_id)
+            distill_labels = self.distill_info[1][distill_i]
 
         # label smoothing
         token_labels *= (1 - self.args.label_smoothing)
@@ -63,7 +74,10 @@ class OnlineTrainDataset(torch.utils.data.Dataset):
         class_weight[class_none_index] = self.token_weights[0]
         class_weight[0] = 0
 
-        return tokens, attention_mask, token_labels, class_weight, num_tokens
+        if self.args.distill:
+            return tokens, attention_mask, token_labels, distill_labels, class_weight, num_tokens
+        else:
+            return tokens, attention_mask, token_labels, class_weight, num_tokens
 
 
 class OnlineValidDataset(torch.utils.data.Dataset):
