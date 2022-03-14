@@ -264,7 +264,11 @@ class Trainer():
             for step, batch in tqdm(enumerate(filter_loader), total=len(filter_loader)):
 
                 # calculate outs
-                tokens, mask, label, class_weight = (x.to(self.args.device) for x in batch)
+                if self.args.distill:
+                    tokens, mask, label, distill_label, class_weight = (x.to(self.args.device) for x in batch)
+                else:
+                    tokens, mask, label, class_weight = (x.to(self.args.device) for x in batch)
+
                 outs = self.mean_teacher(tokens, mask)
                 outs = outs.cpu().detach().numpy()
                 label = label.cpu().numpy()

@@ -207,7 +207,8 @@ if __name__ == "__main__":
 
     # model
     # args.model = 'microsoft/deberta-v3-large'
-    args.model = 'microsoft/deberta-v3-large-ducky'
+    # args.model = 'microsoft/deberta-v3-large-ducky'
+    args.model = 'microsoft/deberta-v3-large-crf'
 
     # optimizer
     # args.optimizer = "adahessian"

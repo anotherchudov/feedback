@@ -5,6 +5,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from .debertav3 import DebertaV3Large
 from .debertav3_ducky import DebertaV3LargeDucky
+from .debertav3_crf import DebertaV3LargeCRF
 
 def get_model(args):
     if args.model == 'microsoft/deberta-v3-large':
@@ -21,6 +22,8 @@ def get_model(args):
         for m in model.modules():
             if isinstance(m, torch.nn.Dropout):
                 m.p = args.dropout_ratio
+    elif args.model == 'microsoft/deberta-v3-large-crf':
+        model = DebertaV3LargeCRF(args).to(args.device)
 
     # distributed training
     if args.ddp:

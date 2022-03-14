@@ -518,7 +518,8 @@ class TextAugmenter:
             print('[ Text Augmenter ] Initializing tokenizer...')
 
         if args.model in ['microsoft/deberta-v3-large',
-                          'microsoft/deberta-v3-large-ducky']:
+                          'microsoft/deberta-v3-large-ducky',
+                          'microsoft/deberta-v3-large-crf',]:
             tokenizer = DebertaV2TokenizerFast.from_pretrained('microsoft/deberta-v3-large')
             tokenizer.model_max_length = max_len
         else:
