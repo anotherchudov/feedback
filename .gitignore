@@ -2,8 +2,7 @@
 *.h5py
 wandb/
 
-# model
-*.pt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -292,3 +291,6 @@ tags
 
 # .lock
 *.lock# Initially taken from Github's Python gitignore file
+
+#
+input/feedback-prize-2021
