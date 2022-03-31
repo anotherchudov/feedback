@@ -9,23 +9,20 @@
 input
 ├── test
 └── train
+└── train.csv
+└── sample_submission.csv
 ```
 
-* If training debertav2, download a transformers library that provides `DebertaV2TokenizerFast`. This [kaggle dataset](https://www.kaggle.com/datasets/sergeichudov/feedbackdebertav2tokenizer) uses code from https://github.com/mingboiz/transformers/tree/deberta-v2-fast-tokenizer
+* If training debertav1, download a transformers library that provides `DebertaV2TokenizerFast`. This [kaggle dataset](https://www.kaggle.com/datasets/sergeichudov/feedbackdebertav2tokenizer) uses code from https://github.com/mingboiz/transformers/tree/deberta-v2-fast-tokenizer
 
 
-* Make dataset with `prepare_data_for_debertav1.ipynb` or/and `prepare_data_for_debertav2.ipynb`.
-* Modify few lines on top of training script to set a wandb username and project and to add path to appropriate transformers library 
+* Make dataset with `models_training/deberta/prepare_data_for_debertav1.ipynb`.
+* Modify few lines on top of training script to set a wandb username and project and to add path to appropriate transformers library
   * Train 5 folds with:
   
-    ```for fold in {0..4}; do python train_debertav1_large.py $GPU_TO_USE $fold; done```
+    ```for fold in {0..4}; do python models_training/deberta/train_script_debertav1_xlarge.py 0 $fold; done```
     
-    or
-    
-    ```for fold in {0..4}; do python train_debertav2_large.py $GPU1_TO_USE,$GPU2_TO_USE $fold; done```
- ### Optional
- 
-* Collect oof predictions using `collect_debertav1_ps.ipynb` and/or `collect_debertav2_ps.ipynb`
-* Use other branches to train the rest of the models and collect oof predictions from those in the `oof_ps` folder as in notebooks from previous step.
-* Use `evaluate_models.ipynb` to find filter thresholds and expansions.
+* Then here are models: `models_training/deberta/ckpt/`
+
+* Use above model to create [kaggle notebook](https://www.kaggle.com/code/sergeichudov/8th-place-inference-notebook?scriptVersionId=90185474)
    
