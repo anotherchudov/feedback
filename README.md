@@ -10,17 +10,11 @@
 ## 🚀 Getting Started
 
 **What to do to train a model**
-> Check `run-gpu0.ipynb` to run on single gpu. DDP multi-GPU will be supported soon
-
-**What am I doing?**
-- Code that I wrote will mostly be uploaded here often
+> Check `run-gpu0.ipynb` to check the python command to run the training
+ 
+**Experiments**
 - Experiment results could be seen on [Wandb](https://wandb.ai/ducky/feedback_deberta_large?workspace=user-ducky)
 
-**Whatever that will help understanding**
-> of the codebase and easily start based on it
-```python
-python lets_do_this
-```
 
 ## 🏠 Description
 
@@ -66,6 +60,7 @@ feedback
     - seems to have plenty of rooms for performance increase
 - Only Cross-Entropy Loss
 - SWA (stabilize valid performance, at least +0.01 boost)
+- Mean teacher with noise label filtering by exponential moving average
 
 ## ⛔️ Not worked
 - initial learning rate 3e-5
@@ -74,6 +69,7 @@ feedback
 - max gradient norm 10.0
 - SAM Optimzier
 - Dice Loss / Focal Loss with gamma 2.0
+- Position Bucket Expanding at DeBERTaV3
 
 ## 😥 Not sure
 - [reverse cross entropy](https://www.kaggle.com/c/feedback-prize-2021/discussion/306279)
