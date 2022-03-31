@@ -4,7 +4,12 @@
 
 ## Training debertav1-xlarge scripts
 
-* Make `train` directory and put training texts there.
+* Make `input` directory and put training texts there.
+```bash
+input
+├── test
+└── train
+```
 
 * If training debertav2, download a transformers library that provides `DebertaV2TokenizerFast`. This [kaggle dataset](https://www.kaggle.com/datasets/sergeichudov/feedbackdebertav2tokenizer) uses code from https://github.com/mingboiz/transformers/tree/deberta-v2-fast-tokenizer
 
