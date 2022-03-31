@@ -1,78 +1,36 @@
-import sys
-sys.path.insert(0, '/home/qwe/projects/feedback/models_training/longformer/sumbission/codes')
-gpun = sys.argv[1]
-seed = 0
-min_len=0
-wd = 1e-2
-weights_pow = 0.1
-use_groupped_weights = False
-global_attn = 0
-label_smoothing = 0.1
-extra_dense = False
-epochs = 9
-batch_size = 8
-grad_acc_steps = batch_size
-grad_checkpt = True
-data_prefix = ''
-max_grad_norm = 25 * batch_size
-use_mixup = False
-mixup_beta = 1.
-start_eval_at = 1000
-lr = 16e-6
-min_lr = 16e-6
-dataset_version = 1
-warmup_steps = 500
-d1, d2, d3 = (0,0,0)
-rce_weight = .1
-max_grad_norm = 1.
-rce_weight = .1
-if gpun == '0,1':
-    val_fold = 0
-    lr = 16e-6
-    min_lr = 16e-6
-elif gpun == '2,3':
-    val_fold = 0
-    lr = 24e-6
-    min_lr = 24e-6
+# write down your variables
+TRANSFORMERS_PATH = '/win7785/projects/feedback/models_training/codes'
+WANDB_ENTITY = 'ynot'
+WANDB_PROJECT = 'new_feedback_debertav1_xlarge'
 
-ce_weight = 1 - rce_weight
-decay_bias = False
-eval_interval = 200
-    
-sys.path.append('longformer/tvm/python/')
-sys.path.append('longformer/')
+import sys
+GPUN = sys.argv[1]
+VAL_FOLD = int(sys.argv[2])
+sys.path.insert(0, TRANSFORMERS_PATH)
+
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = gpun
+os.makedirs('ckpt/', exist_ok=True)
+os.environ['CUDA_VISIBLE_DEVICES'] = GPUN
+
+import re
+import h5py
+import random
+from random import shuffle
+from glob import glob
+
+import numpy as np
+import pandas as pd
+import dill as pickle
+
+import wandb
+from tqdm import tqdm
+
 import torch as t
 from transformers import DebertaModel
 from torch.utils.checkpoint import checkpoint as grad_checkpoint
-import h5py
-import random
-import numpy as np
-import dill as pickle
-from random import shuffle
-from tqdm import tqdm
-from glob import glob
-import pandas as pd
-import wandb
-import re
 
-with open('../../token_counts.pickle', 'rb') as f:
-    groupped_token_counts, ungroupped_token_counts = pickle.load(f)
-    
-if use_groupped_weights:
-    counts = groupped_token_counts
-else:
-    counts = ungroupped_token_counts
 
-token_weights = (counts.mean() / counts) ** weights_pow
-
-run = wandb.init(entity='schudov', project='feedback_debertav1_xlarge')
-run.name = f'fold{val_fold}_minlr{min_lr}_maxlr{lr}_wd{wd}_warmup{warmup_steps}_gradnorm{max_grad_norm}_ls{label_smoothing}_wp{weights_pow}_mixup{use_mixup}_beta{mixup_beta}_d1{d1}_d2{d2}_d3{d3}_rce{rce_weight}'
-
-gpu1 = 'cuda:0'
-gpu2 = 'cuda:1'
-
+# seed functions
 def seed_everything(seed=0):
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
@@ -82,22 +40,68 @@ def seed_everything(seed=0):
     t.cuda.manual_seed_all(seed)
     t.backends.cudnn.deterministic = True
     t.backends.cudnn.benchmark = False
-    
-    
+
+
+# local variables
+seed = 0
+min_len=0
+wd = 1e-2 # weight decay
+weights_pow = 0.1
+use_groupped_weights = False
+global_attn = 0
+label_smoothing = 0.2
+extra_dense = False
+epochs = 9
+batch_size = 8
+grad_acc_steps = batch_size
+grad_checkpt = False
+data_prefix = ''
+lr = 1.6e-5
+min_lr = 3.2e-6
+dataset_version = 1
+warmup_steps = 200
+d1, d2, d3 = (0,0,0)
+max_grad_norm = 0.1
+decay_bias = False
+rce_weight = .1
+ce_weight = 1 - rce_weight
+
+# related in evaluation
+start_eval_at = 3000
+eval_interval = 200
+val_fold = VAL_FOLD
+
+# labels
 label_names = ['None', 'Lead', 'Position', 'Evidence', 'Claim',
                'Concluding Statement', 'Counterclaim', 'Rebuttal']
 
+# seed all
+seed_everything(seed)
+
+# set wandb settings
+run = wandb.init(entity=WANDB_ENTITY, project=WANDB_PROJECT)
+run.name = f'fold{val_fold}_bs{batch_size}_minlr{min_lr}_maxlr{lr}_ls{label_smoothing}'
+
+# calculate token weights
+with open('../../token_counts.pickle', 'rb') as f:
+    groupped_token_counts, ungroupped_token_counts = pickle.load(f)
+if use_groupped_weights:
+    counts = groupped_token_counts
+else:
+    counts = ungroupped_token_counts
+token_weights = (counts.mean() / counts) ** weights_pow
+
+# get all texts
 all_texts = {}
-for f in glob('../../train/*.txt'):
+for f in glob('../../input/train/*.txt'):
     with open(f) as x:
         all_texts[f.split('/')[-1].split('.')[0]] = x.read()
 
-seed_everything(seed)
 
 class TrainDataset(t.utils.data.Dataset):
     def __init__(self, ids):
         self.ids = ids
-        self.data = h5py.File(f'../../debertav2_datav{dataset_version}.h5py')
+        self.data = h5py.File(f'../../processed_data_v1.h5py')
     def __len__(self):
         return len(self.ids)
     def __getitem__(self, ix):
@@ -122,8 +126,8 @@ class TrainDataset(t.utils.data.Dataset):
 class ValDataset(t.utils.data.Dataset):
     def __init__(self, ids):
         self.ids = ids
-        self.data = h5py.File(f'../../debertav2_datav{dataset_version}.h5py')
-        self.csv = pd.read_csv('../../train.csv')
+        self.data = h5py.File(f'../../processed_data_v1.h5py')
+        self.csv = pd.read_csv('../../input/train.csv')
         self.space_regex = re.compile('[\s\n]')
     def __len__(self):
         return len(self.ids)
@@ -185,7 +189,8 @@ def val_collate_fn(ins):
                  for x in range(len(ins[0]) - 3)) \
                  + ([x[-3] for x in ins], [x[-2] for x in ins], np.array([x[-1] for x in ins]),)
 
-def extract_entities(ps, n):
+
+def extract_entities_bugged(ps, n):
     cat_ps = ps.argmax(-1)
     all_entities = {}
     current_cat = None
@@ -198,17 +203,6 @@ def extract_entities(ps, n):
                 all_entities[current_cat].append((current_start, ix - 1))
             current_cat = (cat_ps[ix] + 1) // 2
             current_start = ix        
-        # elif cat_ps[ix] == 0:
-        #     if current_cat is not None:
-        #         if current_cat not in all_entities:
-        #             all_entities[current_cat] = []
-        #         all_entities[current_cat].append((current_start, ix - 1))
-        #     current_cat = None
-        # elif current_cat is not None and cat_ps[ix] != current_cat * 2:
-        #     if current_cat not in all_entities:
-        #         all_entities[current_cat] = []
-        #     all_entities[current_cat].append((current_start, ix - 1))
-        #     current_cat = None
     if current_cat is not None:
         if current_cat not in all_entities:
             all_entities[current_cat] = []
@@ -217,10 +211,211 @@ def extract_entities(ps, n):
     return all_entities
 
 
-def process_sample(raw_ps, index_map, bounds, gt_spans, num_tokens, match_stats):
+def extract_entities_clean(ps, n):
+    cat_ps = ps.argmax(-1)
+    all_entities = {}
+    current_cat = None
+    current_start = None
+    for ix in range(n):
+        if cat_ps[ix] % 2 == 1:
+            if current_cat is not None:
+                if current_cat not in all_entities:
+                    all_entities[current_cat] = []
+                all_entities[current_cat].append((current_start, ix - 1))
+            current_cat = (cat_ps[ix] + 1) // 2
+            current_start = ix        
+        elif cat_ps[ix] == 0:
+            if current_cat is not None:
+                if current_cat not in all_entities:
+                    all_entities[current_cat] = []
+                all_entities[current_cat].append((current_start, ix - 1))
+            current_cat = None
+        elif current_cat is not None and cat_ps[ix] != current_cat * 2:
+            if current_cat not in all_entities:
+                all_entities[current_cat] = []
+            all_entities[current_cat].append((current_start, ix - 1))
+            current_cat = None
+    if current_cat is not None:
+        if current_cat not in all_entities:
+            all_entities[current_cat] = []
+        all_entities[current_cat].append((current_start, ix))
+            
+    return all_entities
+
+
+def extract_entities_with_exras(ps, n):
+    START_WITH_I = True
+    LOOK_AHEAD = True
+    max_ps = ps.max(-1)
+    
+    ps = ps.argsort(-1)[...,::-1]
+    # argmax
+    cat_ps = ps[:, 0]
+    # argmax2
+    cat_ps2 = ps[:, 1]
+    
+    all_entities = {}
+    new_entity = True
+    current_cat = current_start = current_end = None
+    
+    # except for special tokens
+    for ix in range(n):
+
+        # logic on new entity
+        if new_entity:
+            # Background - ignore
+            if cat_ps[ix] == 0:
+                pass
+
+            # B-LABEL(1,3,5,7,...) - start entity
+            elif cat_ps[ix] % 2 == 1:
+                current_cat = (cat_ps[ix] + 1) // 2
+                current_start = current_end = ix
+                new_entity = False
+                
+                if current_cat in [6, 7]:
+                    LOOK_AHEAD = False
+                else:
+                    LOOK_AHEAD = True
+
+            # I-LABEL(2,4,6,8,...) - conditional start
+            elif cat_ps[ix] % 2 == 0:
+                if START_WITH_I:
+                    # Condition: I-LABEL in argmax with B-LABEL in argmax2
+                    if cat_ps[ix] == (cat_ps2[ix]+1):
+                        current_cat = cat_ps[ix] // 2
+                        current_start = current_end = ix
+                        new_entity = False
+                        
+                        if current_cat in [6, 7]:
+                            LOOK_AHEAD = False
+                        else:
+                            LOOK_AHEAD = True
+        
+        # logic on ongoing entity
+        else:
+            # Background - save current entity and init current
+            if cat_ps[ix] == 0:
+                if LOOK_AHEAD:
+                    if ix < n - 1 and (cat_ps[ix+1] == current_cat*2) and (cat_ps2[ix] == current_cat*2):
+                        current_end = ix
+                    else:
+                        # update current
+                        if current_cat not in all_entities:
+                            all_entities[current_cat] = []
+                        all_entities[current_cat].append((current_start, current_end))
+
+                        # init current for new start
+                        new_entity = True
+                        current_cat = current_start = current_end = None
+                
+                else:
+                    # update current
+                    if current_cat not in all_entities:
+                        all_entities[current_cat] = []
+                    all_entities[current_cat].append((current_start, current_end))
+
+                    # init current for new start
+                    new_entity = True
+                    current_cat = current_start = current_end = None
+
+            # B-LABEL(1,3,5,7,...) - save current entity and start new
+            elif cat_ps[ix] % 2 == 1:
+                if cat_ps[ix] == (current_cat*2-1):
+                    # update current
+                    if current_cat not in all_entities:
+                        all_entities[current_cat] = []
+                    all_entities[current_cat].append((current_start, current_end))
+
+                    # start new current
+                    current_cat = (cat_ps[ix] + 1) // 2
+                    current_start = current_end = ix
+                    new_entity = False
+                    
+                    if current_cat in [6, 7]:
+                        LOOK_AHEAD = False
+                    else:
+                        LOOK_AHEAD = True
+                
+                else:
+                    if LOOK_AHEAD:
+                        if ix < n - 1 and (cat_ps[ix+1] == current_cat*2) and (cat_ps2[ix] == current_cat*2):
+                            current_end = ix
+                        else:
+                            # update current
+                            if current_cat not in all_entities:
+                                all_entities[current_cat] = []
+                            all_entities[current_cat].append((current_start, current_end))
+
+                            # start new current
+                            current_cat = (cat_ps[ix] + 1) // 2
+                            current_start = current_end = ix
+                            new_entity = False
+                        
+                            if current_cat in [6, 7]:
+                                LOOK_AHEAD = False
+                            else:
+                                LOOK_AHEAD = True
+                            
+                    else:
+                        # update current
+                        if current_cat not in all_entities:
+                            all_entities[current_cat] = []
+                        all_entities[current_cat].append((current_start, current_end))
+
+                        # start new current
+                        current_cat = (cat_ps[ix] + 1) // 2
+                        current_start = current_end = ix
+                        new_entity = False
+                        
+                        if current_cat in [6, 7]:
+                            LOOK_AHEAD = False
+                        else:
+                            LOOK_AHEAD = True
+                
+            # I-LABEL(2,4,6,8,...) - conditional continue
+            elif cat_ps[ix] % 2 == 0:
+                # B-LABEL0, I-LABEL0 - continue
+                if cat_ps[ix] == current_cat*2:
+                    current_end = ix
+                # B-LBAEL0, I-LABEL1 - conditional finish current entity
+                else:
+                    if LOOK_AHEAD:
+                        if ix < n - 1 and (cat_ps[ix+1] == current_cat*2) and (cat_ps2[ix] == current_cat*2):
+                            current_end = ix
+                        else:
+                            # update current
+                            if current_cat not in all_entities:
+                                all_entities[current_cat] = []
+                            all_entities[current_cat].append((current_start, current_end))
+
+                            # init current
+                            new_entity = True
+                            current_cat = current_start = current_end = None
+                    else:
+                        # update current
+                        if current_cat not in all_entities:
+                            all_entities[current_cat] = []
+                        all_entities[current_cat].append((current_start, current_end))
+
+                        # init current
+                        new_entity = True
+                        current_cat = current_start = current_end = None
+    
+    # last entity
+    if not new_entity:
+        # update current
+        if current_cat not in all_entities:
+            all_entities[current_cat] = []
+        all_entities[current_cat].append((current_start, current_end))
+    
+    return all_entities
+
+
+def process_sample(raw_ps, index_map, bounds, gt_spans, num_tokens, match_stats, extract_fn):
     
     predicted_spans = {x: [map_span_to_word_indices(span, index_map, bounds) for span in y] 
-                       for x, y in extract_entities(raw_ps, num_tokens).items()}
+                       for x, y in extract_fn(raw_ps, num_tokens).items()}
     
     for cat_ix in range(1, 8):
         
@@ -261,25 +456,23 @@ def process_sample(raw_ps, index_map, bounds, gt_spans, num_tokens, match_stats)
                 unused_p_ix.remove(p_ix)
     return match_stats
 
+
 def map_span_to_word_indices(span, index_map, bounds):
     return (index_map[bounds[span[0], 0]], index_map[bounds[span[1], 1] - 1])
+
 
 def split_predstring(x):
     vals = x.split()
     return int(vals[0]), int(vals[-1])
-    
 
+# data split
 with open('../../id_to_ix_map.pickle', 'rb') as f:
     id_to_ix_map = {x.split('/')[-1].split('.')[0]: y for x, y in pickle.load(f).items()}
 with open('../../data_splits.pickle', 'rb') as f:
     data_splits = pickle.load(f)
-
 train_ids = [id_to_ix_map[x] for fold in range(5) if fold != val_fold for x in data_splits[seed][250]['normed'][fold]]
 val_files = data_splits[seed][250]['normed'][val_fold]
 val_ids = [id_to_ix_map[x] for x in val_files]
-
-if use_mixup:
-    epochs *= 2
 
 all_train_ids = []
 for epoch in range(epochs):
@@ -287,14 +480,20 @@ for epoch in range(epochs):
     for _ in range(3):
         shuffle(epoch_train_ids)
     all_train_ids.extend(epoch_train_ids)
+
+all_train_ids = all_train_ids[:1000]
+val_ids = val_ids[:10]
+start_eval_at = 5
+eval_interval = 1
     
-class TvmLongformer(t.nn.Module):
+# model
+class Model(t.nn.Module):
     def __init__(self, ):
         super().__init__()
         self.feats = DebertaModel.from_pretrained('microsoft/deberta-xlarge')
         self.feats.pooler = None
         if grad_checkpt:
-            self.gradient_checkpointing = True
+            self.feats.gradient_checkpointing_enable()
         self.feats.train();
         if extra_dense:
             self.class_projector = t.nn.Sequential(
@@ -308,77 +507,26 @@ class TvmLongformer(t.nn.Module):
                 t.nn.LayerNorm(1024),
                 t.nn.Linear(1024, 15)
             )
-    def to_gpus(self):
-        self.to(gpu1);
-        for x in self.feats.encoder.layer[len(self.feats.encoder.layer) // 2 - 2:]:
-            x.to(gpu2)
-        self.class_projector.to(gpu2)
-        
             
-    def forward(self, embeddings, attention_mask):
-        hidden_states = self.feats.embeddings(
-            mask=attention_mask,
-            inputs_embeds=embeddings,
-        )
-        attention_mask = self.feats.encoder.get_attention_mask(attention_mask)
-        relative_pos = self.feats.encoder.get_rel_pos(hidden_states)
-        
-        rel_embeddings = self.feats.encoder.get_rel_embedding()
-        next_kv = hidden_states
-        
-        for i, layer_module in enumerate(self.feats.encoder.layer):
-            if i == len(self.feats.encoder.layer) // 2 - 2:  
-                next_kv, attention_mask, relative_pos, rel_embeddings = (x.to(gpu2) for x in (next_kv, attention_mask, relative_pos, rel_embeddings))
-
-            if self.gradient_checkpointing and self.training:
-
-                def create_custom_forward(module):
-                    def custom_forward(*inputs):
-                        return module(*inputs, False)
-
-                    return custom_forward
-
-                hidden_states = grad_checkpoint(
-                    create_custom_forward(layer_module),
-                    next_kv,
-                    attention_mask,
-                    None,
-                    relative_pos,
-                    rel_embeddings,
-                )
-            else:
-                hidden_states = layer_module(
-                    next_kv,
-                    attention_mask,
-                    query_states=None,
-                    relative_pos=relative_pos,
-                    rel_embeddings=rel_embeddings,
-                    output_attentions=False,
-                )
-
-            next_kv = hidden_states          
-
-        return t.log_softmax(self.class_projector(next_kv), -1)
-    
+    def forward(self, embeddings, mask):
+        return t.log_softmax(self.class_projector(self.feats(inputs_embeds=embeddings, attention_mask=mask, return_dict=False)[0]), -1)
     
 train_bs = batch_size//grad_acc_steps
-if use_mixup:
-    train_bs *= 2
 train_dataset = t.utils.data.DataLoader(TrainDataset(all_train_ids), collate_fn=train_collate_fn, 
                                         batch_size=train_bs,
                                         num_workers=8)
 val_dataset = t.utils.data.DataLoader(ValDataset(val_ids), collate_fn=val_collate_fn, batch_size=1, num_workers=8,
                                       persistent_workers=True)
 
-model = TvmLongformer()
-model.to_gpus();
+model = Model().cuda()
+dropout_class = type(model.feats.embeddings.dropout)
 for m in model.modules():
-    if isinstance(m, t.nn.Dropout):
-        m.p = 0
+    if isinstance(m, dropout_class):
+        m.drop_prob = 0
 for l in model.feats.encoder.layer:
-    l.attention.self.dropout.p = d1
-    l.attention.output.dropout.p = d2
-    l.output.dropout.p = d3
+    l.attention.self.dropout.drop_prob = d1
+    l.attention.output.dropout.drop_prob = d2
+    l.output.dropout.drop_prob = d3
         
 weights = []
 biases = []
@@ -395,9 +543,6 @@ opt = t.optim.AdamW([{'params': weights, 'weight_decay': wd, 'lr': 0},
 def validate(model, dataset):
     ls = []
     model.eval();
-    val_matches = t.zeros(16)
-    val_labels = t.zeros(16)
-    match_stats = {ix:  {'fp': 0, 'fn': 0, 'tp': 0} for ix in range(1, 8)}
     f1s = np.zeros(8)
     rec = np.zeros(7)
     prec = np.zeros(7)
@@ -407,10 +552,9 @@ def validate(model, dataset):
     all_gt_dicts = []
     all_index_maps = []
     
-    
-    for sample_ix, (tokens, mask, labels, labels_mask, bounds, gt_dicts, index_map, num_tokens) in tqdm(enumerate(dataset), total=len(dataset)):
+    for sample_ix, (tokens, mask, labels, labels_mask, bounds, gt_dicts, index_map, num_tokens) in enumerate(dataset):
         with t.no_grad():
-            tokens, mask, label, label_mask = (x.to(gpu2) for x in (tokens, mask, labels, labels_mask))
+            tokens, mask, label, label_mask = (x.cuda() for x in (tokens, mask, labels, labels_mask))
             num_tokens = num_tokens[0]
             with t.cuda.amp.autocast():
                 outs = model(model.feats.embeddings.word_embeddings(tokens), mask)
@@ -420,21 +564,24 @@ def validate(model, dataset):
             all_gt_dicts.append(gt_dicts[0])
             all_index_maps.append(index_map[0])
             all_val_outs[sample_ix, : num_tokens - 2] = outs.cpu().numpy()[0, 1:num_tokens - 1]
-    for sample_ix in range(len(all_val_nums)):
-        match_stats = process_sample(all_val_outs[sample_ix],
-                                                   all_index_maps[sample_ix], all_val_bounds[sample_ix],
-                                                   all_gt_dicts[sample_ix],
-                                                   all_val_nums[sample_ix], match_stats)
-    for ix in range(1, 8):
-        f1s[ix] = match_stats[ix]['tp'] / (1e-7 + match_stats[ix]['tp'] + .5 * (match_stats[ix]['fp'] + match_stats[ix]['fn']))
-        rec[ix - 1] = match_stats[ix]['tp'] / (1e-7 + match_stats[ix]['tp'] + match_stats[ix]['fn'])
-        prec[ix - 1] = match_stats[ix]['tp'] / (1e-7 + match_stats[ix]['tp'] + match_stats[ix]['fp'])
-    f1s[0] = np.mean(f1s[1:])
+    
+    all_f1s = []
+    for extract_fn in (extract_entities_bugged, extract_entities_clean, extract_entities_with_exras):
+        match_stats = {ix:  {'fp': 0, 'fn': 0, 'tp': 0} for ix in range(1, 8)}
+        for sample_ix in range(len(all_val_nums)):
+            match_stats = process_sample(all_val_outs[sample_ix],
+                                                       all_index_maps[sample_ix], all_val_bounds[sample_ix],
+                                                       all_gt_dicts[sample_ix],
+                                                       all_val_nums[sample_ix], match_stats, extract_fn)
+        for ix in range(1, 8):
+            f1s[ix] = match_stats[ix]['tp'] / (1e-7 + match_stats[ix]['tp'] + .5 * (match_stats[ix]['fp'] + match_stats[ix]['fn']))
+            rec[ix - 1] = match_stats[ix]['tp'] / (1e-7 + match_stats[ix]['tp'] + match_stats[ix]['fn'])
+            prec[ix - 1] = match_stats[ix]['tp'] / (1e-7 + match_stats[ix]['tp'] + match_stats[ix]['fp'])
+        f1s[0] = np.mean(f1s[1:])
+        all_f1s.append(f1s[0])
 
     model.train()
-    val_accs = (val_matches / val_labels).cpu().numpy()
-    val_labels = val_labels.cpu().numpy()
-    return f1s
+    return all_f1s
 
 def calc_acc(raw_ps, raw_labels, valid_mask):
     valid_mask = (valid_mask > 0).float()
@@ -470,37 +617,25 @@ norms = []
 train_matches = t.zeros(16)
 train_labels = t.zeros(16)
 log_dict = {}
-best_val_score = 0
+best_val_scores = [0] * 3
 
 past_averaged_params = []
 current_averaged_params = {x: y.clone().double() for x, y in model.state_dict().items()}
 from tqdm import tqdm
 step = 0
-
-gpu1_params = [p for p in model.parameters() if p.device.index == 0]
-gpu2_params = [p for p in model.parameters() if p.device.index == 1]    
+model_params = [p for p in model.parameters()]
     
 scaler = t.cuda.amp.GradScaler(init_scale=65536.0/grad_acc_steps)
+
 for step_, batch in enumerate(train_dataset):
     if step_ % grad_acc_steps == 0:
         for ix in range(len(opt.param_groups)):
-            opt.param_groups[ix]['lr'] = lr_schedule[step]
+            opt.param_groups[ix]['lr'] = lr_schedule[step_]
         opt.zero_grad()
-    tokens, mask = (x.to(gpu1) for x in batch[:2])
-    label, label_mask = (x.to(gpu2) for x in batch[2:])
-    if use_mixup:
-        rand = t.tensor(np.random.beta(mixup_beta, mixup_beta), dtype=t.float, device='cuda:0').expand(1,1,1)
-        emb_a, emb_b = model.feats.embeddings.word_embeddings(tokens).chunk(2, 0)
-        lbl_a, lbl_b = label.chunk(2, 0)
-        lm_a, lm_b = label_mask.chunk(2, 0)
-        mask = (mask.sum(0, keepdim=True) > 0).float()
-        embeddings = emb_a * rand.expand(1,1,1) + emb_b * (1 - rand)
-        label = lbl_a * rand + lbl_b * (1 - rand)
-        label_mask = lm_a * rand + lm_b * (1 - rand)
-    else:
-        embeddings = model.feats.embeddings.word_embeddings(tokens.to(gpu1))
+    tokens, mask, label, label_mask = (x.cuda() for x in batch)
+    embeddings = model.feats.embeddings.word_embeddings(tokens)
     with t.cuda.amp.autocast():
-        outs = model(embeddings, mask.to(gpu1))
+        outs = model(embeddings, mask)
     outs = outs.float()
     ce = -(((outs * label).sum(-1) * label_mask).sum(-1) / label_mask.sum(-1)).mean()
     if rce_weight == 0:
@@ -511,33 +646,26 @@ for step_, batch in enumerate(train_dataset):
     scaler.scale(l).backward()
     ls.append(l.detach())
     if step_ % grad_acc_steps == grad_acc_steps - 1:
+        
         if max_grad_norm is not None:
             scaler.unscale_(opt)
-            norm = t.norm(t.cat([t.stack([t.norm(p.grad.detach()) for p in gpu1_params]), 
-                                 t.stack([t.norm(p.grad.detach()) for p in gpu2_params]).to(gpu1)]))
+            norm = t.norm(t.stack([t.norm(p.grad.detach()) for p in model_params]))
             
             if t.isfinite(norm):
-                grad_mult_gpu1 = (max_grad_norm / (norm + 1e-6)).clamp(max=1.)
-                grad_mult_gpu2 = grad_mult_gpu1.to(gpu2)
-                for p in gpu1_params:
-                    p.grad.detach().mul_(grad_mult_gpu1)
-                for p in gpu2_params:
-                    p.grad.detach().mul_(grad_mult_gpu2)
+                grad_mult = (max_grad_norm / (norm + 1e-6)).clamp(max=1.)
+                for p in model_params:
+                    p.grad.detach().mul_(grad_mult)
         scaler.step(opt)#.step()
         scaler.update()
+        
         with t.no_grad():
             current_averaged_params = {x: y.clone().double() + current_averaged_params[x] for x, y in model.state_dict().items()}
             match_updates = calc_acc(outs, label, label_mask)
             train_matches += match_updates[0]
             train_labels += match_updates[1]
-        if step % eval_interval == (eval_interval - 1):
-            # norms = t.stack(norms)
-            log_dict = {}
-            # 'norm_mean': t.mean(norms).item(),
-            #             'norm_max': t.max(norms).item(),
-            #             'norm_.9': t.quantile(norms, .9).item(),
-            #             'norm_.95': t.quantile(norms, .95).item(),}
             
+        if step % eval_interval == (eval_interval - 1):
+            log_dict = {}
             norms = []
             t.autograd.set_grad_enabled(False)
             params_backup = {x: y.cpu().clone() for x, y in model.state_dict().items()}
@@ -563,22 +691,21 @@ for step_, batch in enumerate(train_dataset):
                     if params_ix >= 5 and params_ix % 5 == 0:
                         model.cpu()
                         model.load_state_dict({x: (y / params_ix).float() for x, y in evaluation_params.items()})
-                        model.to(gpu2)
-                        f1s = validate(model, val_dataset)
-                        val_score = f1s[0]
-                        if val_score >= best_val_score:
-                            best_val_score = val_score
-                            t.save(model.state_dict(), f'checkpoints_xlarge_v1/{run.name}')
-                        log_dict.update(make_match_dict(None, f'ValSWA{params_ix*eval_interval}', f1s))
+                        model.cuda()
+                        all_f1s = validate(model, val_dataset)
+                        
+                        for val_fn_ix, val_fn_name in enumerate(('bugged', 'clean', 'extra')):
+                            val_score = all_f1s[val_fn_ix]
+                            if val_score >= best_val_scores[val_fn_ix]:
+                                best_val_scores[val_fn_ix] = val_score
+                                t.save(model.state_dict(), f'ckpt/{val_fn_name}_{run.name}')
+                            log_dict.update(make_match_dict(None, f'{val_fn_name}_SWA{params_ix*eval_interval}', [all_f1s[val_fn_ix]]))
 
-            
             model.cpu()
             model.load_state_dict(params_backup)
-            model.to_gpus()
+            model.cuda()
             current_averaged_params = {x: y.clone() for x, y in model.state_dict().items()}
     
             t.autograd.set_grad_enabled(True)
             wandb.log(log_dict)        
         step += 1
-        
-

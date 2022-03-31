@@ -1,7 +1,10 @@
 # Dataset
 *.h5py
 wandb/
-
+input/
+data_rev1.csv
+kaggle_inference_notebooks/
+processed_data_v1.h5py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
